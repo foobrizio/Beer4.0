@@ -3,7 +3,7 @@
 --MQTT Topic Hierarchy
 
 La struttura momentaneamente designata per i topic sarà la seguente:
-  Beer4.0/<DeviceName>/<DeviceNumber>/<TopicName>
+  Beer4.0/*DeviceName*/*DeviceNumber*/*TopicName*
 
 Ad esempio, per l'esp Stocker, avremo un topic del genere:
   Beer4.0/Stocker/1/Sensors
