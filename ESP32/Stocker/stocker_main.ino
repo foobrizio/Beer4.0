@@ -1,15 +1,19 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
+#include <DHT.h>
 
 #include "WiFi.h"
 #include <PubSubClient.h>
 
-#include <NTPClient.h>
-#include <WifiUdp.h>
 
-// BME280 Temperature and Humidity sensor stuff
-Adafruit_BME280 bme; // I2C
+// DHT11 Configuration (temperature / humitity)
+#define DHTTYPE DHT11
+#define DHTPIN 27
+DHT dht(DHTPIN,DHTTYPE);
+
+// Flame and Light sensors Configuration
+#define LIGHT_PIN 12 //Analog
+#define FLAME_PIN 14 //Digital
 
 //Dati per la connessione WiFi
 const char* ssid = "Gabriele-2.4GHz";
@@ -25,14 +29,14 @@ char msg[50];
 int value = 0;
 
 //Dati per la connessione al server NTP (per l'orario)
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP);
+//WiFiUDP ntpUDP;
+//NTPClient timeClient(ntpUDP);
 
 // Il tick è la durata base di delayTime per il nostro ESP32
 unsigned long tick=1000;
 
-unsigned char bmeTickCounter=0; //Questo è il counter per le misurazioni col bme
-unsigned char bmeTickQty=10; //Questo è il numero di tick da ottenere per avere una misurazione bme
+unsigned char sensorTickCounter=0; //Questo è il counter per le misurazioni col bme
+unsigned char sensorTickQty=10; //Questo è il numero di tick da ottenere per avere una misurazione bme
 
 unsigned char flushTickCounter=0; //Questo è il counter per il flush dei dati via MQTT.
 unsigned char flushTickQty=60; //Ogni tot tick inviamo tutti i dati raccolti via MQTT.
@@ -42,8 +46,8 @@ unsigned char flushTickQty=60; //Ogni tot tick inviamo tutti i dati raccolti via
 typedef struct{
   float temperature;
   float humidity;
-  float light;
-  float flame;
+  int light;
+  byte flame;
   long time;
 }Map;
 
@@ -55,24 +59,20 @@ void setup() {
 
   Serial.begin(115200);
 
-  connectToWifi();
+  connectToWiFi();
   setupNTP();
   setupMQTT();
-  bmeStart();
+  setupSensors();
 }
 
 /*
  * Questo metodo serve ad implementare la connessione I2C con il bme280 
  */
-void bmeStart(){
+void setupSensors(){
   
-  bool status;
-  status = bme.begin(0x76);  
-  if (!status) {
-    Serial.println("Could not find a valid BME280 sensor, check wiring!");
-    while (1);
-  }
-  Serial.println("BME280 Sensor found.");
+  dht.begin();
+  pinMode(LIGHT_PIN, INPUT_PULLUP);
+  pinMode(FLAME_PIN, INPUT_PULLUP);
 }
 
 /*
@@ -93,13 +93,13 @@ void connectToWiFi(){
  * Configurazione del server NTP per recuperare l'orario da internet
  */
 void setupNTP(){
-  timeClient.begin();
+  //timeClient.begin();
   // Set offset time in seconds to adjust for your timezone, for example:
   // GMT +1 = 3600
   // GMT +8 = 28800
   // GMT -1 = -3600
   // GMT 0 = 0
-  timeClient.setTimeOffset(3600);
+  //timeClient.setTimeOffset(3600);
 }
 
 /*
@@ -138,16 +138,12 @@ void callback(char* topic, byte* message, unsigned int length) {
 
 void loop() {
 
-  bmeTickCounter++;
+  sensorTickCounter++;
   flushTickCounter++;
 
-  if(bmeTickCounter == bmeTickQty){
+  if(sensorTickCounter == sensorTickQty){
     //Se entriamo qui, allora facciamo una misurazione e la salviamo in locale.
-    myMap[mapPointer].temperature= bme.readTemperature();
-    myMap[mapPointer].humidity = bme.readHumitiy();
-    myMap[mapPointer].time = 0L;
-    mapPointer++;
-    bmeTickCounter = 0;
+    measureSensors();
   }
 
   if(flushTickCounter >= flushTickQty){
@@ -163,6 +159,27 @@ void loop() {
   delay(tick);
 }
 
+
+void measureSensors(){
+  byte light = senseLight();
+  byte flame = digitalRead(FLAME_PIN);
+  myMap[mapPointer].temperature= dht.readTemperature();
+  myMap[mapPointer].humidity = dht.readHumidity();
+  myMap[mapPointer].light= light;
+  myMap[mapPointer].flame = flame;
+  myMap[mapPointer].time = 0L;
+  mapPointer++;
+  sensorTickCounter = 0;
+}
+
+/*
+ * This method returns a percentage of the detected light, from 100 (Very Bright)
+ * to 0 (Dark)
+ */
+int senseLight(){
+  int l = analogRead(LIGHT_PIN);
+  return map(l,4095,0,0,100);
+}
 /*
  * Il metodo flush() serve per inviare tutti i dati raccolti dall'ESP via MQTT.
  * Una volta inviati, i dati locali vengono cancellati.
