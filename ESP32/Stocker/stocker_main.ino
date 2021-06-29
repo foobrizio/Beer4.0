@@ -16,8 +16,8 @@ DHT dht(DHTPIN,DHTTYPE);
 #define FLAME_PIN 14 //Digital
 
 //Dati per la connessione WiFi
-const char* ssid = "ssid";
-const char* pass = "pass";
+const char* ssid = "";
+const char* pass = ";
 
 //Dati per la configurazione MQTT
 const char* mqtt_server = "broker.hivemq.com";
@@ -30,6 +30,8 @@ PubSubClient client(espClient);
 //WiFiUDP ntpUDP;
 //NTPClient timeClient(ntpUDP);
 
+// Qeusto boolean attiva o disattiva la scheda
+boolean active=true;
 // Il tick è la durata base di delayTime per il nostro ESP32
 unsigned long tick=1000;
 
@@ -127,9 +129,11 @@ void callback(char* topic, byte* message, unsigned int length) {
       flush();
     }
     else if(messageTemp == "off"){
+      active=false;
       Serial.println("off");
     }
     else if(messageTemp == "on"){
+      active=true;
       Serial.println("on");
     }
   }
@@ -167,23 +171,25 @@ void subscribe(){
 void loop() {
 
   client.loop();
-  sensorTickCounter++;
-  flushTickCounter++;
-
-  if(sensorTickCounter == sensorTickQty){
-    //Se entriamo qui, allora facciamo una misurazione e la salviamo in locale.
-    measureSensors();
-  }
-
-  if(flushTickCounter >= flushTickQty){
-    //Se entriamo qui, allora facciamo una flush dei dati locali via MQTT
-    byte result = flush();
-    if(result == 0){
-      //La flush è avvenuta con successo
-      flushTickCounter = 0;
-      mapPointer = 0;
+  if(active){
+    Serial.println("Active");
+    sensorTickCounter++;
+    flushTickCounter++;
+    if(sensorTickCounter == sensorTickQty){
+      //Se entriamo qui, allora facciamo una misurazione e la salviamo in locale.
+      measureSensors();
+    }
+    if(flushTickCounter >= flushTickQty){
+      //Se entriamo qui, allora facciamo una flush dei dati locali via MQTT
+      byte result = flush();
+      if(result == 0){
+        //La flush è avvenuta con successo
+        flushTickCounter = 0;
+        mapPointer = 0;
+      }
     }
   }
+  
   delay(tick);
 }
 
@@ -214,7 +220,7 @@ uint8_t senseLight(){
  * locali possono essere eliminati, altrimenti vengono conservati.
  */
 byte flush(){
-  
+
   if (!client.connected()) {
     reconnect();
   }
