@@ -17,7 +17,7 @@ DHT dht(DHTPIN,DHTTYPE);
 
 //Dati per la connessione WiFi
 const char* ssid = "";
-const char* pass = ";
+const char* pass = "";
 
 //Dati per la configurazione MQTT
 const char* mqtt_server = "broker.hivemq.com";
