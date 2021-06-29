@@ -2,7 +2,7 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
-#include "WiFi.h"
+#include <WiFi.h>
 #include <PubSubClient.h>
 
 
@@ -16,17 +16,15 @@ DHT dht(DHTPIN,DHTTYPE);
 #define FLAME_PIN 14 //Digital
 
 //Dati per la connessione WiFi
-const char* ssid = "Gabriele-2.4GHz";
-const char* password = "i8Eo6zdPhvfqgzPVKo85hWP1";
+const char* ssid = "ssid";
+const char* pass = "pass;
 
 //Dati per la configurazione MQTT
 const char* mqtt_server = "broker.hivemq.com";
-const int mqttPort = 1883;
+const int mqtt_port = 1883;
+
 WiFiClient espClient;
 PubSubClient client(espClient);
-long lastMsg = 0;
-char msg[50];
-int value = 0;
 
 //Dati per la connessione al server NTP (per l'orario)
 //WiFiUDP ntpUDP;
@@ -35,33 +33,32 @@ int value = 0;
 // Il tick è la durata base di delayTime per il nostro ESP32
 unsigned long tick=1000;
 
-unsigned char sensorTickCounter=0; //Questo è il counter per le misurazioni col bme
-unsigned char sensorTickQty=10; //Questo è il numero di tick da ottenere per avere una misurazione bme
+uint8_t sensorTickCounter=0; //Questo è il counter per le misurazioni col bme
+uint8_t sensorTickQty=10; //Questo è il numero di tick da ottenere per avere una misurazione bme
 
-unsigned char flushTickCounter=0; //Questo è il counter per il flush dei dati via MQTT.
-unsigned char flushTickQty=60; //Ogni tot tick inviamo tutti i dati raccolti via MQTT.
+uint8_t flushTickCounter=0; //Questo è il counter per il flush dei dati via MQTT.
+uint8_t flushTickQty=60; //Ogni tot tick inviamo tutti i dati raccolti via MQTT.
 
 
 //Qui definiamo una Mappa per raccogliere e salvare i dati ricevuti dai sensori
 typedef struct{
   float temperature;
   float humidity;
-  int light;
+  uint8_t light;
   byte flame;
   long time;
 }Map;
 
 //Creazione della Mappa e del relativo puntatore.
 Map myMap[3600];
-unsigned char mapPointer= 0;
+uint8_t mapPointer= 0;
 
 void setup() {
 
   Serial.begin(115200);
-
-  connectToWiFi();
-  setupNTP();
-  setupMQTT();
+  setup_wifi();
+  //setupNTP();
+  setup_mqtt();
   setupSensors();
 }
 
@@ -78,15 +75,28 @@ void setupSensors(){
 /*
  * Questo serve per connettersi alla rete WiFi
  */
-void connectToWiFi(){
+void setup_wifi(){
 
+  delay(10);
+  // We start by connecting to a WiFi network
   Serial.print("Connecting to ");
   Serial.println(ssid);
-  WiFi.begin(ssid,password);
+  WiFi.begin(ssid,pass);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
+    Serial.print(".");
   }
+  randomSeed(micros());
   Serial.println("Connected to the WiFi network!!");
+}
+
+/*
+ * Configurazione del broker MQTT.
+ */
+void setup_mqtt(){
+  client.setServer(mqtt_server,mqtt_port);
+  client.setCallback(callback);
+  reconnect();
 }
 
 /*
@@ -102,42 +112,61 @@ void setupNTP(){
   //timeClient.setTimeOffset(3600);
 }
 
-/*
- * Configurazione del broker MQTT.
- */
-void setupMQTT(){
-  client.setServer(mqtt_server,mqttPort);
-  client.setCallback(callback);
-}
-
-
-
 void callback(char* topic, byte* message, unsigned int length) {
-  Serial.print("Message arrived on topic: ");
-  Serial.print(topic);
-  Serial.print(". Message: ");
+  Serial.println("Message arrived.");
   String messageTemp;
    
   for (int i = 0; i < length; i++) {
-    Serial.print((char)message[i]);
     messageTemp += (char)message[i];
   }
-  Serial.println();
  
   //Da qui controlliamo i messaggi che riceviamo.
-  if (String(topic) == "beer4.0/stocker/1/output") {
-    Serial.print("Changing output to ");
-    if(messageTemp == "on"){
-      Serial.println("on");
+  if (String(topic) == "brewIoT/stocker/1/command") {
+
+    if(messageTemp == "refresh"){
+      flush();
     }
     else if(messageTemp == "off"){
       Serial.println("off");
     }
+    else if(messageTemp == "on"){
+      Serial.println("on");
+    }
+  }
+}
+
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    String clientId = "Esp32-Brewer";
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      delay(1000);
+      subscribe();
+    }
+    else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  } 
+}
+
+void subscribe(){
+  boolean result = client.subscribe("brewIoT/stocker/1/command");
+  if(result){
+    Serial.println("Subscribed!!!");
   }
 }
 
 void loop() {
 
+  client.loop();
   sensorTickCounter++;
   flushTickCounter++;
 
@@ -148,20 +177,18 @@ void loop() {
 
   if(flushTickCounter >= flushTickQty){
     //Se entriamo qui, allora facciamo una flush dei dati locali via MQTT
-    char result = flush();
+    byte result = flush();
     if(result == 0){
       //La flush è avvenuta con successo
       flushTickCounter = 0;
       mapPointer = 0;
     }
   }
-
   delay(tick);
 }
 
-
 void measureSensors(){
-  byte light = senseLight();
+  uint8_t light = senseLight();
   byte flame = digitalRead(FLAME_PIN);
   myMap[mapPointer].temperature= dht.readTemperature();
   myMap[mapPointer].humidity = dht.readHumidity();
@@ -176,7 +203,7 @@ void measureSensors(){
  * This method returns a percentage of the detected light, from 100 (Very Bright)
  * to 0 (Dark)
  */
-int senseLight(){
+uint8_t senseLight(){
   int l = analogRead(LIGHT_PIN);
   return map(l,4095,0,0,100);
 }
@@ -186,6 +213,11 @@ int senseLight(){
  * Il metodo ritorna l'esito dell'operazione. Se l'esito è positivo, allora i dati
  * locali possono essere eliminati, altrimenti vengono conservati.
  */
-char flush(){
-
+byte flush(){
+  
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.publish("brewIoT/stocker/1/sensors","yayaya");
+  return 0;
 }
