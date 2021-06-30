@@ -10,6 +10,19 @@ http://openmobilealliance.org/wp/OMNA/LwM2M/LwM2MRegistry.html .
 L'oggetto rappresenta il dispositivo, mentre la risorsa è il tipo di sensore. Quindi avremo un topic per ogni tipo di dato raccolto.
 Il payload invece sarà strutturato da una stringa JSON.
 
+Ecco una lista di ID che possono fare al caso nostro:
+3301 : Luminosità ( Illuminance);
+3303 : Temperatura;
+3304 : Umidità;
+3306 : Actuation (On/Off);
+3312 : Power Control (Relay);
+5850 : On/Off;
+3    : Device;
+503  : Fire Alarm;
+10278: High Temperature Alarm;
+10350: Light;
+10353: Warning Light;
+
 Ogni dispositivo avrà un nome. I nomi sono:
   1) brewer, per gli ESP32 attaccati alle cisterne
   2) stocker, per l'ESP32 in magazzino
