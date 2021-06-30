@@ -1,4 +1,4 @@
-# Beer4.0
+# BrewIoT
 
 --MQTT Topic Hierarchy
 
