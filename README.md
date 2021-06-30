@@ -11,11 +11,16 @@ L'oggetto rappresenta il dispositivo, mentre la risorsa è il tipo di sensore. Q
 Il payload invece sarà strutturato da una stringa JSON.
 
 Ecco una lista di ID che possono fare al caso nostro:
-3301 : Luminosità ( Illuminance);
+3301 : Luminosità ( Illuminance);\n
 3303 : Temperatura;
 3304 : Umidità;
 3306 : Actuation (On/Off);
 3312 : Power Control (Relay);
+5601 : Min Range Value;
+5602 : Max Range Value;
+5700 : Sensor Value; //Il valore del sensore
+5701 : Sensor Units; //L'unità di misura del valore del sensore
+5751 : Sensor Type
 5850 : On/Off;
 3    : Device;
 503  : Fire Alarm;
