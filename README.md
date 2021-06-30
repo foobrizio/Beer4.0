@@ -11,22 +11,22 @@ L'oggetto rappresenta il dispositivo, mentre la risorsa è il tipo di sensore. Q
 Il payload invece sarà strutturato da una stringa JSON.
 
 Ecco una lista di ID che possono fare al caso nostro:
-    1) 3    : Device;
-    2) 503  : Fire Alarm;
-    3) 3301 : Luminosità ( Illuminance);
-    4) 3303 : Temperatura;
-    5) 3304 : Umidità;
-    6) 3306 : Actuation (On/Off);
-    7) 3312 : Power Control (Relay);
-    8) 5601 : Min Range Value;
-    9) 5602 : Max Range Value;
-    10) 5700 : Sensor Value; //Il valore del sensore;
-    11) 5701 : Sensor Units; //L'unità di misura del valore del sensore;
-    12) 5751 : Sensor Type;
-    13) 5850 : On/Off;
-    14) 10278: High Temperature Alarm;
-    15) 10350: Light;
-    16) 10353: Warning Light;
+  1) 3    : Device;
+  2) 503  : Fire Alarm;
+  3) 3301 : Luminosità ( Illuminance);
+  4) 3303 : Temperatura;
+  5) 3304 : Umidità;
+  6) 3306 : Actuation (On/Off);
+  7) 3312 : Power Control (Relay);
+  8) 5601 : Min Range Value;
+  9) 5602 : Max Range Value;
+  10) 5700 : Sensor Value; //Il valore del sensore;
+  11) 5701 : Sensor Units; //L'unità di misura del valore del sensore;
+  12) 5751 : Sensor Type;
+  13) 5850 : On/Off;
+  14) 10278: High Temperature Alarm;
+  15) 10350: Light;
+  16) 10353: Warning Light;
   
 
 Ogni dispositivo avrà un nome. I nomi sono:
@@ -47,7 +47,7 @@ Il fullTopic avrà, in aggiunta, un prefisso che serve a specificare il tipo di 
   3) data, dove invieremo i dati dei sensori, magari richiesti in precedenza.
 
 Un esempio di fullTopic sono i seguenti:
-    1) cmd/brewIoT/st/0/3304/0/5700 (per inviare la richiesta di leggere il valore temperatura);
-    2) data/brewIoT/st/0/3304/0/5700 (per inviare i dati del sensore come risposta).
+  1) cmd/brewIoT/st/0/3304/0/5700 (per inviare la richiesta di leggere il valore temperatura);
+  2) data/brewIoT/st/0/3304/0/5700 (per inviare i dati del sensore come risposta).
 
 
