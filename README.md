@@ -3,7 +3,7 @@
 --MQTT Topic Hierarchy
 
 La struttura dei topic è parte integrante della semantica OMA lwM2M, quindi seguirà questa dicitura:
-/{ObjectID}/{ObjectInstance}/{ResourceID}.
+brewIoT/{DeviceID}/{DeviceInstance}/{ObjectID}/{ObjectInstance}/{ResourceID}.
 
 Ogni ID è un intero di 16-bit, mentre le istanze sono da 8 bit. I vari ID possono essere reperiti dall'OMA Registry online:
 http://openmobilealliance.org/wp/OMNA/LwM2M/LwM2MRegistry.html .
@@ -33,3 +33,10 @@ Ogni dispositivo avrà un nome. I nomi sono:
   1) brewer, per gli ESP32 attaccati alle cisterne
   2) stocker, per l'ESP32 in magazzino
   3) brewmaster, per il Raspberry PI
+
+
+Un esempio di topic sarà il seguente:
+
+brewIoT/st/0/3304/0/5700
+
+st è il dispositivo stocker, seguito dall'istanza del dispositivo (perchè potremo averne più di uno), 0 in questo caso. 3304/0 è l'istanza 0 dell'oggetto Umidità, perchè potremmo avere più di un sensore di questo tipo sul dispositivo, e infine 5700 è il valore del sensore.
