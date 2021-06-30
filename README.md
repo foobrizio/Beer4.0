@@ -2,12 +2,13 @@
 
 --MQTT Topic Hierarchy
 
-La struttura momentaneamente designata per i topic sarà la seguente:
-  brewIoT/*DeviceName*/*DeviceNumber*/*TopicName*
+La struttura dei topic è parte integrante della semantica OMA lwM2M, quindi seguirà questa dicitura:
+/{ObjectID}/{ObjectInstance}/{ResourceID}.
 
-Ad esempio, per l'esp Stocker, avremo un topic del genere:
-  brewIoT/stocker/1/sensors
- 
+Ogni ID è un intero di 16-bit, mentre le istanze sono da 8 bit. I vari ID possono essere reperiti dall'OMA Registry online:
+http://openmobilealliance.org/wp/OMNA/LwM2M/LwM2MRegistry.html .
+L'oggetto rappresenta il dispositivo, mentre la risorsa è il tipo di sensore. Quindi avremo un topic per ogni tipo di dato raccolto.
+Il payload invece sarà strutturato da una stringa JSON.
 
 Ogni dispositivo avrà un nome. I nomi sono:
   1) brewer, per gli ESP32 attaccati alle cisterne
