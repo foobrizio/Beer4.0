@@ -40,3 +40,13 @@ Un esempio di topic sarà il seguente:
 brewIoT/st/0/3304/0/5700
 
 st è il dispositivo stocker, seguito dall'istanza del dispositivo (perchè potremo averne più di uno), 0 in questo caso. 3304/0 è l'istanza 0 dell'oggetto Umidità, perchè potremmo avere più di un sensore di questo tipo sul dispositivo, e infine 5700 è il valore del sensore.
+
+Il fullTopic avrà, in aggiunta, un prefisso che serve a specificare il tipo di messaggio che viaggia da esso. Avremo tre tipi di prefissi:
+  1) cmd, dove invieremo comandi o richieste di valori;
+  2) resp, dove invieremo eventuali feedback di responso ad eventuali comandi;
+  3) data, dove invieremo i dati dei sensori, magari richiesti in precedenza.
+
+Un esempio di fullTopic sono i seguenti:
+
+cmd/brewIoT/st/0/3304/0/5700 (per inviare la richiesta di leggere il valore temperatura);
+data/brewIoT/st/0/3304/0/5700 (per inviare i dati del sensore come risposta).
