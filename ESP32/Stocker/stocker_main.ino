@@ -19,7 +19,7 @@
 DHT dht(DHTPIN,DHTTYPE);
 
 // Flame and Light sensors Configuration
-#define LIGHT_PIN 12 //Analog
+#define LIGHT_PIN 34 //Analog
 #define FLAME_PIN 14 //Digital
 
 //Dati per la connessione WiFi
@@ -138,21 +138,28 @@ void callback(char* topic, byte* message, unsigned int length) {
   strcpy(myTopic, topic);
 
   //Qui tokenizziamo il token per navigarlo attraverso i vari levels
-  char *token = strtok(myTopic,"/"); //da qui leggeremo "cmd"
-  token = strtok(NULL,"/"); //da qui leggeremo "brewIoT"
-  token = strtok(NULL,"/"); //da qui leggeremo "st"
-  token = strtok(NULL,"/"); //da qui leggeremo "0"
-  char *objectId = strtok(NULL,"/");
+  String levels[10]; //Qui dentro avremo i nostri livelli
+  char *ptr = NULL;
+  byte index = 0;
+  ptr = strtok(myTopic, "/");  // takes a list of delimiters
+  while(ptr != NULL){
+    levels[index] = ptr;
+    index++;
+    ptr = strtok(NULL, "/");  // takes a list of delimiters
+  }
+  String objectId=levels[4];
+  String objectInstance=levels[5];
+  String resId=levels[6];
+  String observe=levels[7];
 
   StaticJsonDocument<200> doc;
+
+  
   if(objectId=="3301"){
     //Illuminance
-    char *objectInstance = strtok("NULL","/");
     if(objectInstance=="0"){
-      char *resId = strtok("NULL","/");
       if(resId=="5700"){
         //we want to take the value
-        char *observe = strtok("NULL","/");
         if(observe=="observe"){
           //we want to observe it
           // Deserialize the JSON document
@@ -163,13 +170,16 @@ void callback(char* topic, byte* message, unsigned int length) {
             Serial.println(error.f_str());
             return;
           }
-          const char *value = doc["v"];
+          String value = doc["v"];          
           if(value == "ON"){
+            client.publish("resp/brewIoT/st/0/3301/0/5700","The observe for light was turned on");
             observeLight= true;
           }
           else if(value == "OFF"){
+            client.publish("resp/brewIoT/st/0/3301/0/5700","The observe for light was turned off");
             observeLight = false;
           }
+          
         }
         else processLight();
       }
@@ -177,29 +187,29 @@ void callback(char* topic, byte* message, unsigned int length) {
   }
 
 
-  else if(token=="3303"){
+  else if(objectId=="3303"){
     //Temperature
-    char *objectInstance = strtok("NULL","/");
     if(objectInstance=="0"){
-      char *resId = strtok("NULL","/");
       if(resId=="5700"){
         //we want to take the value
-        char *observe = strtok("NULL","/");
         if(observe=="observe"){
           //we want to observe it
           // Deserialize the JSON document
           DeserializationError error = deserializeJson(doc, messageTemp);
           // Test if parsing succeeds.
           if (error) {
+            
             Serial.print(F("deserializeJson() failed: "));
             Serial.println(error.f_str());
             return;
           }
-          const char *value = doc["v"];
+          String value = doc["v"];
           if(value == "ON"){
+            client.publish("resp/brewIoT/st/0/3303/0/5700","The observe for temperature was turned on");
             observeTemperature= true;
           }
           else if(value == "OFF"){
+            client.publish("resp/brewIoT/st/0/3303/0/5700","The observe for temperature was turned off");
             observeTemperature = false;
           }
         }
@@ -209,14 +219,11 @@ void callback(char* topic, byte* message, unsigned int length) {
   }
 
 
-  else if(token=="3304"){
+  else if(objectId=="3304"){
     //Humidity
-    char *objectInstance = strtok("NULL","/");
     if(objectInstance=="0"){
-      char *resId = strtok("NULL","/");
       if(resId=="5700"){
         //we want to take the value
-        char *observe = strtok("NULL","/");
         if(observe=="observe"){
           //we want to observe it
           // Deserialize the JSON document
@@ -227,11 +234,13 @@ void callback(char* topic, byte* message, unsigned int length) {
             Serial.println(error.f_str());
             return;
           }
-          const char *value = doc["v"];
+          String value = doc["v"];
           if(value == "ON"){
+            client.publish("resp/brewIoT/st/0/3304/0/5700","The observe for humidity was turned on");
             observeHumidity= true;
           }
           else if(value == "OFF"){
+            client.publish("resp/brewIoT/st/0/3303/0/5700","The observe for humidity was turned on");
             observeHumidity = false;
           }
         }
@@ -241,14 +250,11 @@ void callback(char* topic, byte* message, unsigned int length) {
   }
 
 
-  else if(token=="503"){
+  else if(objectId=="503"){
     //Flame sensor
-    char *objectInstance = strtok("NULL","/");
     if(objectInstance=="0"){
-      char *resId = strtok("NULL","/");
       if(resId=="5700"){
         //we want to take the value
-        char *observe = strtok("NULL","/");
         if(observe=="observe"){
           //we want to observe it
           // Deserialize the JSON document
@@ -259,11 +265,13 @@ void callback(char* topic, byte* message, unsigned int length) {
             Serial.println(error.f_str());
             return;
           }
-          const char *value = doc["v"];
+          String value = doc["v"];
           if(value == "ON"){
+            client.publish("resp/brewIoT/st/0/503/0/5700","The observe for flame detection was turned on");
             observeFlame= true;
           }
           else if(value == "OFF"){
+            client.publish("resp/brewIoT/st/0/503/0/5700","The observe for flame detection was turned off");
             observeFlame = false;
           }
         }
@@ -297,7 +305,13 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
-  client.subscribe("cmd/brewIoT/st/0/#");
+  boolean res = client.subscribe("cmd/brewIoT/st/0/#");
+  if(res){
+    Serial.println("Subscribed!");
+  }
+  else{
+    Serial.println("Unable to subscribe");
+  }
 }
 
 
@@ -305,7 +319,7 @@ void loop() {
 
   client.loop();
   if(active){
-    Serial.println("Active");
+    //Serial.println("Active");
     if(observeTemperature){
       //Qui dentro entriamo se l'observe per la temp è attivo
       tempTickCounter++;
@@ -383,8 +397,6 @@ void processHumidity(){
 void processLight(){
   Serial.println("Sending light");
   int l = analogRead(LIGHT_PIN);
-  Serial.print("light is: ");
-  Serial.println(l);
   uint8_t value= map(l,4095,0,0,100);
   char lightString[8];
   dtostrf(value, 1, 2, lightString);
@@ -411,3 +423,4 @@ int64_t get_time() {
 	gettimeofday(&tv, NULL);
 	return (tv.tv_sec * 1000LL + (tv.tv_usec / 1000LL));
 }
+
