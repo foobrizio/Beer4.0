@@ -144,6 +144,7 @@ void callback(char* topic, byte* message, unsigned int length) {
   token = strtok(NULL,"/"); //da qui leggeremo "0"
   char *objectId = strtok(NULL,"/");
 
+  StaticJsonDocument<200> doc;
   if(objectId=="3301"){
     //Illuminance
     char *objectInstance = strtok("NULL","/");
@@ -152,8 +153,23 @@ void callback(char* topic, byte* message, unsigned int length) {
       if(resId=="5700"){
         //we want to take the value
         char *observe = strtok("NULL","/");
-        if(observe!=NULL){
+        if(observe=="observe"){
           //we want to observe it
+          // Deserialize the JSON document
+          DeserializationError error = deserializeJson(doc, messageTemp);
+          // Test if parsing succeeds.
+          if (error) {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.f_str());
+            return;
+          }
+          const char *value = doc["v"];
+          if(value == "ON"){
+            observeLight= true;
+          }
+          else if(value == "OFF"){
+            observeLight = false;
+          }
         }
         else processLight();
       }
@@ -169,8 +185,23 @@ void callback(char* topic, byte* message, unsigned int length) {
       if(resId=="5700"){
         //we want to take the value
         char *observe = strtok("NULL","/");
-        if(observe!=NULL){
+        if(observe=="observe"){
           //we want to observe it
+          // Deserialize the JSON document
+          DeserializationError error = deserializeJson(doc, messageTemp);
+          // Test if parsing succeeds.
+          if (error) {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.f_str());
+            return;
+          }
+          const char *value = doc["v"];
+          if(value == "ON"){
+            observeTemperature= true;
+          }
+          else if(value == "OFF"){
+            observeTemperature = false;
+          }
         }
         else processTemperature();
       }
@@ -186,8 +217,23 @@ void callback(char* topic, byte* message, unsigned int length) {
       if(resId=="5700"){
         //we want to take the value
         char *observe = strtok("NULL","/");
-        if(observe!=NULL){
+        if(observe=="observe"){
           //we want to observe it
+          // Deserialize the JSON document
+          DeserializationError error = deserializeJson(doc, messageTemp);
+          // Test if parsing succeeds.
+          if (error) {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.f_str());
+            return;
+          }
+          const char *value = doc["v"];
+          if(value == "ON"){
+            observeHumidity= true;
+          }
+          else if(value == "OFF"){
+            observeHumidity = false;
+          }
         }
         else processHumidity();
       }
@@ -203,8 +249,23 @@ void callback(char* topic, byte* message, unsigned int length) {
       if(resId=="5700"){
         //we want to take the value
         char *observe = strtok("NULL","/");
-        if(observe!=NULL){
+        if(observe=="observe"){
           //we want to observe it
+          // Deserialize the JSON document
+          DeserializationError error = deserializeJson(doc, messageTemp);
+          // Test if parsing succeeds.
+          if (error) {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.f_str());
+            return;
+          }
+          const char *value = doc["v"];
+          if(value == "ON"){
+            observeFlame= true;
+          }
+          else if(value == "OFF"){
+            observeFlame = false;
+          }
         }
         else processFlame();
       }
@@ -296,9 +357,9 @@ void processTemperature(){
   float temperature= dht.readTemperature();
   char tempString[8];
   dtostrf(temperature, 1, 2, tempString);
-  StaticJsonDocument<256> doc;
-  doc["value"]=tempString;
-  char buffer[256];
+  StaticJsonDocument<200> doc;
+  doc["v"]=tempString;
+  char buffer[128];
   size_t n = serializeJson(doc, buffer);
   client.publish("data/brewIoT/st/0/3303/0/5700", buffer, n);
 }
@@ -308,9 +369,9 @@ void processHumidity(){
   float humidity= dht.readHumidity();
   char humString[8];
   dtostrf(humidity, 1, 2, humString);
-  StaticJsonDocument<256> doc;
-  doc["value"]=humString;
-  char buffer[256];
+  StaticJsonDocument<200> doc;
+  doc["v"]=humString;
+  char buffer[128];
   size_t n = serializeJson(doc, buffer);
   client.publish("data/brewIoT/st/0/3304/0/5700", buffer, n);
 }
@@ -322,18 +383,26 @@ void processHumidity(){
 void processLight(){
   Serial.println("Sending light");
   int l = analogRead(LIGHT_PIN);
+  Serial.print("light is: ");
+  Serial.println(l);
   uint8_t value= map(l,4095,0,0,100);
   char lightString[8];
   dtostrf(value, 1, 2, lightString);
-  StaticJsonDocument<256> doc;
-  doc["value"]=lightString;
-  char buffer[256];
+  StaticJsonDocument<200> doc;
+  doc["v"]=lightString;
+  char buffer[128];
   size_t n = serializeJson(doc, buffer);
   client.publish("data/brewIoT/st/0/3301/0/5700", buffer, n);
 }
 
 void processFlame(){
+  Serial.println("Sending flame");
   boolean flame = digitalRead(FLAME_PIN);
+  StaticJsonDocument<200> doc;
+  doc["v"]=String(flame);
+  char buffer[128];
+  size_t n = serializeJson(doc, buffer);
+  client.publish("data/brewIoT/st/0/503/0/5700", buffer, n);
   //client.publish("data/brewIoT/st/0/503/0/5700", flame);
 }
 
