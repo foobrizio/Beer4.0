@@ -153,7 +153,7 @@ void callback(char* topic, byte* message, unsigned int length) {
   String observe=levels[7];
 
   StaticJsonDocument<200> doc;
-
+  StaticJsonDocument<200> resp;
   
   if(objectId=="3301"){
     //Illuminance
@@ -170,15 +170,20 @@ void callback(char* topic, byte* message, unsigned int length) {
             Serial.println(error.f_str());
             return;
           }
-          String value = doc["v"];          
+          String value = doc["v"];
+          resp["type"]="observe";    
           if(value == "ON"){
-            client.publish("resp/brewIoT/st/0/3301/0/5700","The observe for light was turned on");
+            resp["v"]="ON";
             observeLight= true;
           }
           else if(value == "OFF"){
-            client.publish("resp/brewIoT/st/0/3301/0/5700","The observe for light was turned off");
+            resp["v"]="OFF";
             observeLight = false;
           }
+          else return;
+          char buffer[128];
+          size_t n = serializeJson(resp, buffer);
+          client.publish("resp/brewIoT/st/0/3301/0/5700", buffer, n);
           
         }
         else processLight();
@@ -204,14 +209,19 @@ void callback(char* topic, byte* message, unsigned int length) {
             return;
           }
           String value = doc["v"];
+          resp["type"]="observe";
           if(value == "ON"){
-            client.publish("resp/brewIoT/st/0/3303/0/5700","The observe for temperature was turned on");
+            resp["v"]="ON";
             observeTemperature= true;
           }
           else if(value == "OFF"){
-            client.publish("resp/brewIoT/st/0/3303/0/5700","The observe for temperature was turned off");
+            resp["v"]="OFF";
             observeTemperature = false;
           }
+          else return;
+          char buffer[128];
+          size_t n = serializeJson(resp, buffer);
+          client.publish("resp/brewIoT/st/0/3303/0/5700", buffer, n);
         }
         else processTemperature();
       }
@@ -235,14 +245,19 @@ void callback(char* topic, byte* message, unsigned int length) {
             return;
           }
           String value = doc["v"];
+          resp["type"]="observe";
           if(value == "ON"){
-            client.publish("resp/brewIoT/st/0/3304/0/5700","The observe for humidity was turned on");
+            resp["v"]="ON";
             observeHumidity= true;
           }
           else if(value == "OFF"){
-            client.publish("resp/brewIoT/st/0/3303/0/5700","The observe for humidity was turned on");
+            resp["v"]="OFF";
             observeHumidity = false;
           }
+          else return;
+          char buffer[128];
+          size_t n = serializeJson(resp, buffer);
+          client.publish("resp/brewIoT/st/0/3304/0/5700", buffer, n);
         }
         else processHumidity();
       }
@@ -266,14 +281,19 @@ void callback(char* topic, byte* message, unsigned int length) {
             return;
           }
           String value = doc["v"];
+          resp["type"]="observe";
           if(value == "ON"){
-            client.publish("resp/brewIoT/st/0/503/0/5700","The observe for flame detection was turned on");
+            resp["v"]="ON";
             observeFlame= true;
           }
           else if(value == "OFF"){
-            client.publish("resp/brewIoT/st/0/503/0/5700","The observe for flame detection was turned off");
+            resp["v"]="OFF";
             observeFlame = false;
           }
+          else return;
+          char buffer[128];
+          size_t n = serializeJson(resp, buffer);
+          client.publish("resp/brewIoT/st/0/503/0/5700", buffer, n);
         }
         else processFlame();
       }
@@ -423,4 +443,3 @@ int64_t get_time() {
 	gettimeofday(&tv, NULL);
 	return (tv.tv_sec * 1000LL + (tv.tv_usec / 1000LL));
 }
-
