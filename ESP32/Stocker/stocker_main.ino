@@ -10,6 +10,9 @@
 
 #include <string.h>
 
+//Questa libreria serve per l'NTP
+#include <time.h>
+
 
 
 
@@ -36,8 +39,9 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 //Dati per la connessione al server NTP (per l'orario)
-//WiFiUDP ntpUDP;
-//NTPClient timeClient(ntpUDP);
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
 
 // Qeusto boolean attiva o disattiva la scheda
 boolean active=true;
@@ -73,6 +77,8 @@ void setup() {
   //setupNTP();
   setup_mqtt();
   setupSensors();
+  // Init and get the time
+  setupTime();
 }
 
 /*
@@ -115,7 +121,9 @@ void setup_mqtt(){
 /*
  * Configurazione del server NTP per recuperare l'orario da internet
  */
-void setupNTP(){
+void setupTime(){
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  Serial.println(getTime());
   //timeClient.begin();
   // Set offset time in seconds to adjust for your timezone, for example:
   // GMT +1 = 3600
@@ -154,7 +162,7 @@ void callback(char* topic, byte* message, unsigned int length) {
 
   StaticJsonDocument<200> doc;
   StaticJsonDocument<200> resp;
-  
+
   if(objectId=="3301"){
     //Illuminance
     if(objectInstance=="0"){
@@ -392,6 +400,7 @@ void processTemperature(){
   char tempString[8];
   dtostrf(temperature, 1, 2, tempString);
   StaticJsonDocument<200> doc;
+  doc["tstamp"]=getTime();
   doc["v"]=tempString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -404,6 +413,7 @@ void processHumidity(){
   char humString[8];
   dtostrf(humidity, 1, 2, humString);
   StaticJsonDocument<200> doc;
+  doc["tstamp"]=getTime();
   doc["v"]=humString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -421,6 +431,7 @@ void processLight(){
   char lightString[8];
   dtostrf(value, 1, 2, lightString);
   StaticJsonDocument<200> doc;
+  doc["tstamp"]=getTime();
   doc["v"]=lightString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -431,15 +442,21 @@ void processFlame(){
   Serial.println("Sending flame");
   boolean flame = digitalRead(FLAME_PIN);
   StaticJsonDocument<200> doc;
+  doc["tstamp"]=getTime();
   doc["v"]=String(flame);
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
   client.publish("data/brewIoT/st/0/503/0/5700", buffer, n);
-  //client.publish("data/brewIoT/st/0/503/0/5700", flame);
 }
 
-int64_t get_time() {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec * 1000LL + (tv.tv_usec / 1000LL));
+unsigned long getTime() {
+  time_t now;
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    //Serial.println("Failed to obtain time");
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    return(0);
+  }
+  time(&now);
+  return now;
 }
