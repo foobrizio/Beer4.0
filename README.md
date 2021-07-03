@@ -44,7 +44,8 @@ Un esempio di topic sarà il seguente:
 
 st è il dispositivo stocker, seguito dall'istanza del dispositivo (perchè potremo averne più di uno), 0 in questo caso. 3304/0 è l'istanza 0 dell'oggetto Umidità, perchè potremmo avere più di un sensore di questo tipo sul dispositivo, e infine 5700 è il valore del sensore.
 Un secondo esempio di topic, per la gestione dei WiFi relay, sarà:
-    br/0/3306/0/5850
+     
+     br/0/3306/0/5850
 
 Il fullTopic avrà, in aggiunta, un prefisso che serve a specificare il tipo di messaggio che viaggia da esso. Avremo tre tipi di prefissi:
   1) cmd, dove invieremo comandi o richieste di valori;
