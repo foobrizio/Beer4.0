@@ -191,7 +191,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
-          client.publish("resp/brewIoT/st/0/3301/0/5700", buffer, n);
+          client.publish("resp/st/0/3301/0/5700", buffer, n);
           
         }
         else processLight();
@@ -229,7 +229,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
-          client.publish("resp/brewIoT/st/0/3303/0/5700", buffer, n);
+          client.publish("resp/st/0/3303/0/5700", buffer, n);
         }
         else processTemperature();
       }
@@ -265,7 +265,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
-          client.publish("resp/brewIoT/st/0/3304/0/5700", buffer, n);
+          client.publish("resp/st/0/3304/0/5700", buffer, n);
         }
         else processHumidity();
       }
@@ -301,7 +301,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
-          client.publish("resp/brewIoT/st/0/503/0/5700", buffer, n);
+          client.publish("resp/st/0/503/0/5700", buffer, n);
         }
         else processFlame();
       }
@@ -333,7 +333,7 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
-  boolean res = client.subscribe("cmd/brewIoT/st/0/#");
+  boolean res = client.subscribe("cmd/st/0/#");
   if(res){
     Serial.println("Subscribed!");
   }
@@ -404,7 +404,7 @@ void processTemperature(){
   doc["v"]=tempString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
-  client.publish("data/brewIoT/st/0/3303/0/5700", buffer, n);
+  client.publish("data/st/0/3303/0/5700", buffer, n);
 }
 
 void processHumidity(){
@@ -417,7 +417,7 @@ void processHumidity(){
   doc["v"]=humString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
-  client.publish("data/brewIoT/st/0/3304/0/5700", buffer, n);
+  client.publish("data/st/0/3304/0/5700", buffer, n);
 }
 
 /*
@@ -435,7 +435,7 @@ void processLight(){
   doc["v"]=lightString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
-  client.publish("data/brewIoT/st/0/3301/0/5700", buffer, n);
+  client.publish("data/st/0/3301/0/5700", buffer, n);
 }
 
 void processFlame(){
@@ -446,7 +446,7 @@ void processFlame(){
   doc["v"]=String(flame);
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
-  client.publish("data/brewIoT/st/0/503/0/5700", buffer, n);
+  client.publish("data/st/0/503/0/5700", buffer, n);
 }
 
 unsigned long getTime() {
