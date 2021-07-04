@@ -13,7 +13,7 @@
 #include "OneWire.h"
 #include "DallasTemperature.h"
 
-
+#define TEMP_LED 4
 //Configurazione termometro 
 #define SENSOR_PIN 13
 OneWire oneWire(SENSOR_PIN);
@@ -61,7 +61,7 @@ void setup() {
   setup_mqtt();
   // Init and get the time
   setupTime();
-  tempSensor.begin();
+  setupWires();
 }
 
 /*
@@ -100,6 +100,12 @@ void setupTime(){
   Serial.println(getTime());
 }
 
+void setupWires(){
+  tempSensor.begin();
+  pinMode(TEMP_LED,OUTPUT);
+  digitalWrite(TEMP_LED,LOW);
+}
+
 
 void callback(char* topic, byte* message, unsigned int length) {
   Serial.println("Message arrived.");
@@ -123,10 +129,10 @@ void callback(char* topic, byte* message, unsigned int length) {
     index++;
     ptr = strtok(NULL, "/");  // takes a list of delimiters
   }
-  String objectId=levels[4];
-  String objectInstance=levels[5];
-  String resId=levels[6];
-  String observe=levels[7];
+  String objectId=levels[3];
+  String objectInstance=levels[4];
+  String resId=levels[5];
+  String observe=levels[6];
 
   StaticJsonDocument<200> doc;
   StaticJsonDocument<200> resp;
@@ -160,9 +166,33 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
-          client.publish("resp/brewIoT/br/0/3303/0/5700", buffer, n);
+          client.publish("resp/br/1/3303/0/5700", buffer, n);
         }
         else processTemperature();
+      }
+    }
+  }
+  else if(objectId=="3311"){
+    //LEDs
+    Serial.println("Checking LEDS");
+    // Deserialize the JSON document
+    DeserializationError error = deserializeJson(doc, messageTemp);
+    // Test if parsing succeeds.
+      if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str());
+        return;
+      }
+    String value = doc["v"];
+    if(objectInstance=="0"){
+      //tempLED
+      if(resId=="5850"){
+        if(value=="ON"){
+          digitalWrite(TEMP_LED, HIGH);
+        }
+        else if(value=="OFF"){
+          digitalWrite(TEMP_LED, LOW);
+        }
       }
     }
   }
@@ -191,7 +221,7 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
-  boolean res = client.subscribe("cmd/brewIoT/br/0/#");
+  boolean res = client.subscribe("cmd/br/1/#");
   if(res){
     Serial.println("Subscribed!");
   }
@@ -226,10 +256,10 @@ void processTemperature(){
   dtostrf(temperatureC, 1, 2, tempString);
   StaticJsonDocument<200> doc;
   doc["tstamp"]=getTime();
-  doc["v"]=tempString;
+  doc["v"]=temperatureC;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
-  client.publish("data/brewIoT/br/0/3303/0/5700", buffer, n);
+  client.publish("data/br/1/3303/0/5700", buffer, n);
 }
 
 unsigned long getTime() {
