@@ -25,6 +25,11 @@ DHT dht(DHTPIN,DHTTYPE);
 #define LIGHT_PIN 34 //Analog
 #define FLAME_PIN 14 //Digital
 
+// LED configuration
+#define TEMP_LED 25
+#define HUM_LED 33
+#define LIGHT_LED 32
+#define FLAME_LED 35
 //Dati per la connessione WiFi
 const char* ssid = "Gabriele-2.4GHz";
 const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
@@ -76,7 +81,7 @@ void setup() {
   setup_wifi();
   //setupNTP();
   setup_mqtt();
-  setupSensors();
+  setupWires();
   // Init and get the time
   setupTime();
 }
@@ -84,11 +89,21 @@ void setup() {
 /*
  * Questo metodo serve ad implementare la connessione I2C con il bme280 
  */
-void setupSensors(){
+void setupWires(){
   
   dht.begin();
   pinMode(LIGHT_PIN, INPUT_PULLUP);
   pinMode(FLAME_PIN, INPUT_PULLUP);
+
+  pinMode(TEMP_LED, OUTPUT);
+  pinMode(HUM_LED, OUTPUT);
+  pinMode(LIGHT_LED, OUTPUT);
+  pinMode(FLAME_LED, OUTPUT);
+
+  digitalWrite(TEMP_LED, LOW);
+  digitalWrite(HUM_LED, LOW);
+  digitalWrite(LIGHT_LED, LOW);
+  digitalWrite(FLAME_LED, LOW);
 }
 
 /*
@@ -124,13 +139,6 @@ void setup_mqtt(){
 void setupTime(){
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   Serial.println(getTime());
-  //timeClient.begin();
-  // Set offset time in seconds to adjust for your timezone, for example:
-  // GMT +1 = 3600
-  // GMT +8 = 28800
-  // GMT -1 = -3600
-  // GMT 0 = 0
-  //timeClient.setTimeOffset(3600);
 }
 
 void callback(char* topic, byte* message, unsigned int length) {
@@ -191,7 +199,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
-          client.publish("resp/st/0/3301/0/5700", buffer, n);
+          client.publish("resp/brewIoT/st/0/3301/0/5700", buffer, n);
           
         }
         else processLight();
@@ -229,7 +237,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
-          client.publish("resp/st/0/3303/0/5700", buffer, n);
+          client.publish("resp/brewIoT/st/0/3303/0/5700", buffer, n);
         }
         else processTemperature();
       }
@@ -265,7 +273,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
-          client.publish("resp/st/0/3304/0/5700", buffer, n);
+          client.publish("resp/brewIoT/st/0/3304/0/5700", buffer, n);
         }
         else processHumidity();
       }
@@ -301,11 +309,69 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
-          client.publish("resp/st/0/503/0/5700", buffer, n);
+          client.publish("resp/brewIoT/st/0/503/0/5700", buffer, n);
         }
         else processFlame();
       }
     }
+  }
+
+  else if(objectId=="3311"){
+    //LEDs
+    // Deserialize the JSON document
+    DeserializationError error = deserializeJson(doc, messageTemp);
+    // Test if parsing succeeds.
+      if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str());
+        return;
+      }
+    String value = doc["v"];
+    if(objectInstance=="0"){
+      //tempLED
+      if(resId=="5850"){
+        if(value=="ON"){
+          digitalWrite(TEMP_LED, HIGH);
+        }
+        else if(value=="OFF"){
+          digitalWrite(TEMP_LED, LOW);
+        }
+      }
+    }
+    else if(objectInstance=="1"){
+      //humLED
+      if(resId=="5850"){
+        if(value=="ON"){
+          digitalWrite(HUM_LED, HIGH);
+        }
+        else if(value=="OFF"){
+          digitalWrite(HUM_LED, LOW);
+        }
+      }
+    }
+    else if(objectInstance=="2"){
+      //lightLED
+      if(resId=="5850"){
+        if(value=="ON"){
+          digitalWrite(LIGHT_LED, HIGH);
+        }
+        else if(value=="OFF"){
+          digitalWrite(LIGHT_LED, LOW);
+        }
+      }
+    }
+    else if(objectInstance=="3"){
+      //flameLED
+      if(resId=="5850"){
+        if(value=="ON"){
+          digitalWrite(FLAME_LED, HIGH);
+        }
+        else if(value=="OFF"){
+          digitalWrite(FLAME_LED, LOW);
+        }
+      }
+    }
+    
   }
 }
 
@@ -333,7 +399,7 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
-  boolean res = client.subscribe("cmd/st/0/#");
+  boolean res = client.subscribe("cmd/brewIoT/st/0/#");
   if(res){
     Serial.println("Subscribed!");
   }
@@ -404,7 +470,7 @@ void processTemperature(){
   doc["v"]=tempString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
-  client.publish("data/st/0/3303/0/5700", buffer, n);
+  client.publish("data/brewIoT/st/0/3303/0/5700", buffer, n);
 }
 
 void processHumidity(){
@@ -417,7 +483,7 @@ void processHumidity(){
   doc["v"]=humString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
-  client.publish("data/st/0/3304/0/5700", buffer, n);
+  client.publish("data/brewIoT/st/0/3304/0/5700", buffer, n);
 }
 
 /*
@@ -435,7 +501,7 @@ void processLight(){
   doc["v"]=lightString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
-  client.publish("data/st/0/3301/0/5700", buffer, n);
+  client.publish("data/brewIoT/st/0/3301/0/5700", buffer, n);
 }
 
 void processFlame(){
@@ -446,7 +512,7 @@ void processFlame(){
   doc["v"]=String(flame);
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
-  client.publish("data/st/0/503/0/5700", buffer, n);
+  client.publish("data/brewIoT/st/0/503/0/5700", buffer, n);
 }
 
 unsigned long getTime() {
