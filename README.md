@@ -20,16 +20,17 @@ Ecco una lista di ID che possono fare al caso nostro:
   4) 3303 : Temperatura;
   5) 3304 : Umidità;
   6) 3306 : Actuation (On/Off);
-  7) 3312 : Power Control (Relay);
-  8) 5601 : Min Range Value;
-  9) 5602 : Max Range Value;
-  10) 5700 : Sensor Value; //Il valore del sensore;
-  11) 5701 : Sensor Units; //L'unità di misura del valore del sensore;
-  12) 5751 : Sensor Type;
-  13) 5850 : On/Off;
-  14) 10278: High Temperature Alarm;
-  15) 10350: Light;
-  16) 10353: Warning Light;
+  7) 3311 : Light Control (Led);
+  8) 3312 : Power Control (Relay);
+  9) 5601 : Min Range Value;
+  10) 5602 : Max Range Value;
+  11) 5700 : Sensor Value; //Il valore del sensore;
+  12) 5701 : Sensor Units; //L'unità di misura del valore del sensore;
+  13) 5751 : Sensor Type;
+  14) 5850 : On/Off;
+  15) 10278: High Temperature Alarm;
+  16) 10350: Light;
+  17) 10353: Warning Light;
   
 
 Ogni dispositivo avrà un nome. I nomi sono:
