@@ -26,10 +26,11 @@ DHT dht(DHTPIN,DHTTYPE);
 #define FLAME_PIN 14 //Digital
 
 // LED configuration
-#define TEMP_LED 25
-#define HUM_LED 33
-#define LIGHT_LED 32
-#define FLAME_LED 35
+#define TEMP_LED 4
+#define HUM_LED 0
+#define LIGHT_LED 2
+#define FLAME_LED 15
+
 //Dati per la connessione WiFi
 const char* ssid = "Gabriele-2.4GHz";
 const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
@@ -67,6 +68,10 @@ uint8_t lightTickCounter=0;
 uint8_t lightTickQty=30; 
 uint8_t flameTickCounter=0;
 uint8_t flameTickQty=3; 
+
+//Questa coppia serve per il controllo della connessione
+uint8_t connectionTickCounter=0;
+uint8_t connectionTickQty=5;
 
 /* Questo è il documento JSON che creiamo con tutti i valori ricevuti dai sensori.
  * Man mano che riceviamo valori, il documento cresce. Alla fine viene serializzato
@@ -131,6 +136,7 @@ void setup_mqtt(){
   client.setServer(mqtt_server,mqtt_port);
   client.setCallback(callback);
   reconnect();
+  delay(2000);
 }
 
 /*
@@ -151,7 +157,9 @@ void callback(char* topic, byte* message, unsigned int length) {
   }
   //Qui convertiamo il char* topic in un char[]
   char myTopic[50];
+  char anotherTopic[50];
   strcpy(myTopic, topic);
+  strcpy(anotherTopic, topic);
 
   //Qui tokenizziamo il token per navigarlo attraverso i vari levels
   String levels[10]; //Qui dentro avremo i nostri livelli
@@ -199,8 +207,9 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
+          checkConnection();
+          client.publish(anotherTopic, NULL);
           client.publish("resp/st/0/3301/0/5700", buffer, n);
-          
         }
         else processLight();
       }
@@ -237,6 +246,8 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
+          checkConnection();
+          client.publish(anotherTopic, NULL);
           client.publish("resp/st/0/3303/0/5700", buffer, n);
         }
         else processTemperature();
@@ -273,6 +284,8 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
+          checkConnection();
+          client.publish(anotherTopic, NULL);
           client.publish("resp/st/0/3304/0/5700", buffer, n);
         }
         else processHumidity();
@@ -309,6 +322,8 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
+          checkConnection();
+          client.publish(anotherTopic, NULL);
           client.publish("resp/st/0/503/0/5700", buffer, n);
         }
         else processFlame();
@@ -318,6 +333,7 @@ void callback(char* topic, byte* message, unsigned int length) {
 
   else if(objectId=="3311"){
     //LEDs
+    Serial.println("Checking LEDS");
     // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, messageTemp);
     // Test if parsing succeeds.
@@ -375,6 +391,10 @@ void callback(char* topic, byte* message, unsigned int length) {
   }
 }
 
+void checkConnection(){
+  if(!client.connected())
+    reconnect();
+}
 
 void reconnect() {
   // Loop until we're reconnected
@@ -470,6 +490,7 @@ void processTemperature(){
   doc["v"]=tempString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
+  checkConnection();
   client.publish("data/st/0/3303/0/5700", buffer, n);
 }
 
@@ -483,6 +504,7 @@ void processHumidity(){
   doc["v"]=humString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
+  checkConnection();
   client.publish("data/st/0/3304/0/5700", buffer, n);
 }
 
@@ -501,6 +523,7 @@ void processLight(){
   doc["v"]=lightString;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
+  checkConnection();
   client.publish("data/st/0/3301/0/5700", buffer, n);
 }
 
@@ -512,6 +535,7 @@ void processFlame(){
   doc["v"]=String(flame);
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
+  checkConnection();
   client.publish("data/st/0/503/0/5700", buffer, n);
 }
 
