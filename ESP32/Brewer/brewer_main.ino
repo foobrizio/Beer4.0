@@ -46,6 +46,9 @@ unsigned long tick=1000;
 uint8_t tempTickCounter=0;
 uint8_t tempTickQty=10; 
 
+uint8_t connectionTickCounter=0;
+uint8_t connectionTickQty=5;
+
 /* Questo è il documento JSON che creiamo con tutti i valori ricevuti dai sensori.
  * Man mano che riceviamo valori, il documento cresce. Alla fine viene serializzato
  * ed inviato tramite MQTT
@@ -89,8 +92,14 @@ void setup_mqtt(){
   client.setServer(mqtt_server,mqtt_port);
   client.setCallback(callback);
   reconnect();
+  delay(2000);
+  StaticJsonDocument<200> resp;
+  resp["v"]="rebooted";
+  char buffer[128];
+  size_t n = serializeJson(resp, buffer);
+  checkConnection();
+  client.publish("resp/br/10/3/0/4", buffer, n);
 }
-
 
 /*
  * Configurazione del server NTP per recuperare l'orario da internet
@@ -106,6 +115,11 @@ void setupWires(){
   digitalWrite(TEMP_LED,LOW);
 }
 
+void checkConnection(){
+  if(!client.connected()){
+    reconnect();
+  }
+}
 
 void callback(char* topic, byte* message, unsigned int length) {
   Serial.println("Message arrived.");
@@ -115,9 +129,12 @@ void callback(char* topic, byte* message, unsigned int length) {
   for (int i = 0; i < length; i++) {
     messageTemp += (char)message[i];
   }
+  Serial.println(messageTemp);
   //Qui convertiamo il char* topic in un char[]
   char myTopic[50];
+  char anotherTopic[50];
   strcpy(myTopic, topic);
+  strcpy(anotherTopic, topic);
 
   //Qui tokenizziamo il token per navigarlo attraverso i vari levels
   String levels[10]; //Qui dentro avremo i nostri livelli
@@ -148,7 +165,6 @@ void callback(char* topic, byte* message, unsigned int length) {
           DeserializationError error = deserializeJson(doc, messageTemp);
           // Test if parsing succeeds.
           if (error) {
-            
             Serial.print(F("deserializeJson() failed: "));
             Serial.println(error.f_str());
             return;
@@ -166,7 +182,10 @@ void callback(char* topic, byte* message, unsigned int length) {
           else return;
           char buffer[128];
           size_t n = serializeJson(resp, buffer);
-          client.publish("resp/br/1/3303/0/5700", buffer, n);
+          checkConnection();
+          client.publish("resp/br/10/3303/0/5700", buffer, n);
+          Serial.println(anotherTopic);
+          client.publish(anotherTopic, NULL);
         }
         else processTemperature();
       }
@@ -221,7 +240,7 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
-  boolean res = client.subscribe("cmd/br/1/#");
+  boolean res = client.subscribe("cmd/br/10/#");
   if(res){
     Serial.println("Subscribed!");
   }
@@ -233,6 +252,12 @@ void subscribe(){
 void loop() {
   // put your main code here, to run repeatedly:
   client.loop();
+  connectionTickCounter++;
+  if(connectionTickCounter>=connectionTickQty){
+    checkConnection();
+    connectionTickCounter = 0;
+  }
+  
   if(active){
     //Serial.println("Active");
     if(observeTemperature){
@@ -259,7 +284,10 @@ void processTemperature(){
   doc["v"]=temperatureC;
   char buffer[128];
   size_t n = serializeJson(doc, buffer);
-  client.publish("data/br/1/3303/0/5700", buffer, n);
+  checkConnection();
+  Serial.print("Temperature: ");
+  Serial.println(temperatureC);
+  client.publish("data/br/10/3303/0/5700", buffer, n);
 }
 
 unsigned long getTime() {
