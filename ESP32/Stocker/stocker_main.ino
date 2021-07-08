@@ -31,6 +31,10 @@ DHT dht(DHTPIN,DHTTYPE);
 #define LIGHT_LED 2
 #define FLAME_LED 15
 
+
+//ID della scheda
+const char* deviceID = "0";
+
 //Dati per la connessione WiFi
 const char* ssid = "Gabriele-2.4GHz";
 const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
@@ -210,7 +214,10 @@ void callback(char* topic, byte* message, unsigned int length) {
           size_t n = serializeJson(resp, buffer);
           checkConnection();
           client.publish(anotherTopic, NULL, true);
-          client.publish("resp/st/0/3301/0/5700", buffer, n, false);
+          char* topicString = "resp/st/";
+          strcat(topicString, deviceID);
+          strcat(topicString, "/3301/0/5700");
+          client.publish(topicString, buffer, n, false);
         }
         else processLight();
       }
@@ -249,7 +256,10 @@ void callback(char* topic, byte* message, unsigned int length) {
           size_t n = serializeJson(resp, buffer);
           checkConnection();
           client.publish(anotherTopic, NULL, true);
-          client.publish("resp/st/0/3303/0/5700", buffer, n, false);
+          char* topicString = "resp/st/";
+          strcat(topicString, deviceID);
+          strcat(topicString, "/3303/0/5700");
+          client.publish(topicString, buffer, n, false);
         }
         else processTemperature();
       }
@@ -287,7 +297,10 @@ void callback(char* topic, byte* message, unsigned int length) {
           size_t n = serializeJson(resp, buffer);
           checkConnection();
           client.publish(anotherTopic, NULL, true);
-          client.publish("resp/st/0/3304/0/5700", buffer, n, false);
+          char* topicString = "resp/st/";
+          strcat(topicString, deviceID);
+          strcat(topicString, "/3304/0/5700");
+          client.publish(topicString, buffer, n, false);
         }
         else processHumidity();
       }
@@ -325,7 +338,10 @@ void callback(char* topic, byte* message, unsigned int length) {
           size_t n = serializeJson(resp, buffer);
           checkConnection();
           client.publish(anotherTopic, NULL, true);
-          client.publish("resp/st/0/503/0/5700", buffer, n, false);
+          char* topicString = "resp/st/";
+          strcat(topicString, deviceID);
+          strcat(topicString, "/503/0/5700");
+          client.publish(topicString, buffer, n, false);
         }
         else processFlame();
       }
@@ -388,7 +404,7 @@ void callback(char* topic, byte* message, unsigned int length) {
         }
       }
     }
-    
+    client.publish(anotherTopic, NULL, true);
   }
 }
 
@@ -402,8 +418,9 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    String clientId = "ESP32-Stocker-0";
-    if (client.connect(clientId.c_str())) {
+    char* clientId = "ESP32-Stocker-";
+    strcat(clientId, deviceID);
+    if (client.connect(clientId)) {
       Serial.println("connected");
       delay(1000);
       subscribe();
@@ -420,7 +437,11 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
-  boolean res = client.subscribe("cmd/st/0/#",1);
+
+  char topicString[]= "cmd/st/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/#");  
+  boolean res = client.subscribe(topicString, 1);
   if(res){
     Serial.println("Subscribed!");
   }
@@ -497,7 +518,10 @@ void processTemperature(){
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  client.publish("data/st/0/3303/0/5700", buffer, n, false);
+  char* topicString = "data/st/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/3303/0/5700");
+  client.publish(topicString, buffer, n, false);
 }
 
 void processHumidity(){
@@ -511,7 +535,10 @@ void processHumidity(){
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  client.publish("data/st/0/3304/0/5700", buffer, n, false);
+  char* topicString = "data/st/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/3304/0/5700");
+  client.publish(topicString, buffer, n, false);
 }
 
 /*
@@ -530,7 +557,10 @@ void processLight(){
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  client.publish("data/st/0/3301/0/5700", buffer, n, false);
+  char* topicString = "data/st/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/3306/0/5700");
+  client.publish(topicString, buffer, n, false);
 }
 
 void processFlame(){
@@ -542,7 +572,10 @@ void processFlame(){
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  client.publish("data/st/0/503/0/5700", buffer, n, false);
+  char* topicString = "data/st/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/503/0/5700");
+  client.publish(topicString, buffer, n, false);
 }
 
 unsigned long getTime() {
