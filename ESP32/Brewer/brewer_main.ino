@@ -20,7 +20,7 @@ OneWire oneWire(SENSOR_PIN);
 DallasTemperature tempSensor(&oneWire);
 
 //ID della scheda
-const char* deviceID = "10";
+const char deviceID[] = "10";
 
 //Dati per la connessione WiFi
 const char* ssid = "Gabriele-2.4GHz";
@@ -99,7 +99,7 @@ void setup_mqtt(){
   uint8_t buffer[128];
   size_t n = serializeJson(resp, buffer);
   checkConnection();
-  char topicString[]= "resp/br/";
+  char topicString[60]= "resp/br/";
   strcat(topicString, deviceID);
   strcat(topicString, "/3/0/4");
   client.publish(topicString, buffer, n, true);
@@ -187,7 +187,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           uint8_t buffer[128];
           size_t n = serializeJson(resp, buffer);
           checkConnection();
-          char topicString[]= "resp/br/";
+          char topicString[60]= "resp/br/";
           strcat(topicString, deviceID);
           strcat(topicString, "/3303/0/5700");
           client.publish(topicString, buffer, n, false);
@@ -231,8 +231,9 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    char *clientId = "ESP32-Brewer-";
+    char clientId[18] = "ESP32-Brewer-";
     strcat(clientId, deviceID);
+    Serial.println(clientId);
     if (client.connect(clientId)) {
       Serial.println("connected");
       delay(1000);
@@ -250,9 +251,10 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel.
-  char topicString[]= "cmd/br/";
+  char topicString[60]= "cmd/br/";
   strcat(topicString, deviceID);
   strcat(topicString, "/#");
+  Serial.println(topicString);  
   boolean res = client.subscribe(topicString,1);
   if(res){
     Serial.println("Subscribed!");
@@ -301,7 +303,7 @@ void processTemperature(){
   checkConnection();
   Serial.print("Temperature: ");
   Serial.println(temperatureC);
-  char topicString[]= "data/br/";
+  char topicString[60]= "data/br/";
   strcat(topicString, deviceID);
   strcat(topicString, "/3303/0/5700");
   client.publish(topicString, buffer, n, false);
@@ -318,4 +320,3 @@ unsigned long getTime() {
   time(&now);
   return now;
 }
-
