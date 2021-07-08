@@ -43,12 +43,11 @@ boolean observeTemperature= true;
 // Il tick è la durata base di delayTime per il nostro ESP32
 unsigned long tick=1000;
 
-uint8_t tempTickCounter=0;
-uint8_t tempTickQty=10; 
+long lastConnectionCheck=0;
+long lastTemperatureCheck=0;
 
-uint8_t connectionTickCounter=0;
-uint8_t connectionTickQty=5;
-
+const long connectionInterval = 5000; //milliseconds
+const long temperatureInterval = 30000; //milliseconds
 /* Questo è il documento JSON che creiamo con tutti i valori ricevuti dai sensori.
  * Man mano che riceviamo valori, il documento cresce. Alla fine viene serializzato
  * ed inviato tramite MQTT
@@ -95,10 +94,10 @@ void setup_mqtt(){
   delay(2000);
   StaticJsonDocument<200> resp;
   resp["v"]="rebooted";
-  char buffer[128];
+  uint8_t buffer[128];
   size_t n = serializeJson(resp, buffer);
   checkConnection();
-  client.publish("resp/br/10/3/0/4", buffer, n);
+  client.publish("resp/br/10/3/0/4", buffer, n, true);
 }
 
 /*
@@ -180,12 +179,12 @@ void callback(char* topic, byte* message, unsigned int length) {
             observeTemperature = false;
           }
           else return;
-          char buffer[128];
+          uint8_t buffer[128];
           size_t n = serializeJson(resp, buffer);
           checkConnection();
-          client.publish("resp/br/10/3303/0/5700", buffer, n);
-          Serial.println(anotherTopic);
-          client.publish(anotherTopic, NULL);
+          client.publish("resp/br/10/3303/0/5700", buffer, n, false);
+          //Serial.println(anotherTopic);
+          client.publish(anotherTopic, NULL, true);
         }
         else processTemperature();
       }
@@ -222,7 +221,7 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    String clientId = "ESP32-Stocker-0";
+    String clientId = "ESP32-Brewer-10";
     if (client.connect(clientId.c_str())) {
       Serial.println("connected");
       delay(1000);
@@ -240,7 +239,7 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
-  boolean res = client.subscribe("cmd/br/10/#");
+  boolean res = client.subscribe("cmd/br/10/#",1);
   if(res){
     Serial.println("Subscribed!");
   }
@@ -252,21 +251,22 @@ void subscribe(){
 void loop() {
   // put your main code here, to run repeatedly:
   client.loop();
-  connectionTickCounter++;
-  if(connectionTickCounter>=connectionTickQty){
+  long now = millis();
+
+  if(now - lastConnectionCheck >= connectionInterval){
     checkConnection();
-    connectionTickCounter = 0;
+    now=millis();
+    lastConnectionCheck= now;
   }
   
   if(active){
     //Serial.println("Active");
     if(observeTemperature){
       //Qui dentro entriamo se l'observe per la temp è attivo
-      tempTickCounter++;
-      if(tempTickCounter>=tempTickQty){
-        //Time to read and send a new temperature data.
+      if(now - lastTemperatureCheck >= temperatureInterval){
         processTemperature();
-        tempTickCounter=0;
+        now=millis();
+        lastTemperatureCheck = now;
       }
     }
   }
@@ -282,12 +282,12 @@ void processTemperature(){
   StaticJsonDocument<200> doc;
   doc["tstamp"]=getTime();
   doc["v"]=temperatureC;
-  char buffer[128];
+  uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
   Serial.print("Temperature: ");
   Serial.println(temperatureC);
-  client.publish("data/br/10/3303/0/5700", buffer, n);
+  client.publish("data/br/10/3303/0/5700", buffer, n, false);
 }
 
 unsigned long getTime() {
@@ -301,3 +301,4 @@ unsigned long getTime() {
   time(&now);
   return now;
 }
+
