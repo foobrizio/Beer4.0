@@ -33,7 +33,7 @@ DHT dht(DHTPIN,DHTTYPE);
 
 
 //ID della scheda
-const char* deviceID = "0";
+const char deviceID[] = "0";
 
 //Dati per la connessione WiFi
 const char* ssid = "Gabriele-2.4GHz";
@@ -214,7 +214,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           size_t n = serializeJson(resp, buffer);
           checkConnection();
           client.publish(anotherTopic, NULL, true);
-          char* topicString = "resp/st/";
+          char topicString[60] = "resp/st/";
           strcat(topicString, deviceID);
           strcat(topicString, "/3301/0/5700");
           client.publish(topicString, buffer, n, false);
@@ -256,7 +256,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           size_t n = serializeJson(resp, buffer);
           checkConnection();
           client.publish(anotherTopic, NULL, true);
-          char* topicString = "resp/st/";
+          char topicString[60] = "resp/st/";
           strcat(topicString, deviceID);
           strcat(topicString, "/3303/0/5700");
           client.publish(topicString, buffer, n, false);
@@ -297,7 +297,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           size_t n = serializeJson(resp, buffer);
           checkConnection();
           client.publish(anotherTopic, NULL, true);
-          char* topicString = "resp/st/";
+          char topicString[60] = "resp/st/";
           strcat(topicString, deviceID);
           strcat(topicString, "/3304/0/5700");
           client.publish(topicString, buffer, n, false);
@@ -338,7 +338,7 @@ void callback(char* topic, byte* message, unsigned int length) {
           size_t n = serializeJson(resp, buffer);
           checkConnection();
           client.publish(anotherTopic, NULL, true);
-          char* topicString = "resp/st/";
+          char topicString[60] = "resp/st/";
           strcat(topicString, deviceID);
           strcat(topicString, "/503/0/5700");
           client.publish(topicString, buffer, n, false);
@@ -418,7 +418,7 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    char* clientId = "ESP32-Stocker-";
+    char clientId[20] = "ESP32-Stocker-";
     strcat(clientId, deviceID);
     if (client.connect(clientId)) {
       Serial.println("connected");
@@ -438,7 +438,7 @@ void reconnect() {
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
 
-  char topicString[]= "cmd/st/";
+  char topicString[20]= "cmd/st/";
   strcat(topicString, deviceID);
   strcat(topicString, "/#");  
   boolean res = client.subscribe(topicString, 1);
@@ -518,7 +518,7 @@ void processTemperature(){
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  char* topicString = "data/st/";
+  char topicString[60] = "data/st/";
   strcat(topicString, deviceID);
   strcat(topicString, "/3303/0/5700");
   client.publish(topicString, buffer, n, false);
@@ -535,7 +535,7 @@ void processHumidity(){
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  char* topicString = "data/st/";
+  char topicString[60] = "data/st/";
   strcat(topicString, deviceID);
   strcat(topicString, "/3304/0/5700");
   client.publish(topicString, buffer, n, false);
@@ -557,7 +557,7 @@ void processLight(){
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  char* topicString = "data/st/";
+  char topicString[60] = "data/st/";
   strcat(topicString, deviceID);
   strcat(topicString, "/3306/0/5700");
   client.publish(topicString, buffer, n, false);
@@ -572,7 +572,7 @@ void processFlame(){
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  char* topicString = "data/st/";
+  char topicString[60] = "data/st/";
   strcat(topicString, deviceID);
   strcat(topicString, "/503/0/5700");
   client.publish(topicString, buffer, n, false);
