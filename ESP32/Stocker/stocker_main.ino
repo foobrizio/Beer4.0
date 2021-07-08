@@ -59,19 +59,20 @@ boolean observeFlame = true;
 // Il tick è la durata base di delayTime per il nostro ESP32
 unsigned long tick=1000;
 
-//Qui abbiamo 4 coppie diverse counter-soglia per i diversi tipi di dati
-uint8_t tempTickCounter=0;
-uint8_t tempTickQty=10; 
-uint8_t humTickCounter = 0;
-uint8_t humTickQty =10;
-uint8_t lightTickCounter=0;
-uint8_t lightTickQty=30; 
-uint8_t flameTickCounter=0;
-uint8_t flameTickQty=3; 
+//Qui abbiamo 4 coppie diverse interval-timestamp per i diversi tipi di dati
+long lastTemperatureCheck;
+long lastHumidityCheck;
+long lastLightCheck;
+long lastFlameCheck;
+
+const long temperatureInterval=30000;
+const long humidityInterval=30000;
+const long lightInterval=30000;
+const long flameInterval=3000;
 
 //Questa coppia serve per il controllo della connessione
-uint8_t connectionTickCounter=0;
-uint8_t connectionTickQty=5;
+long lastConnectionCheck;
+const long connectionInterval = 5000;
 
 /* Questo è il documento JSON che creiamo con tutti i valori ricevuti dai sensori.
  * Man mano che riceviamo valori, il documento cresce. Alla fine viene serializzato
@@ -205,11 +206,11 @@ void callback(char* topic, byte* message, unsigned int length) {
             observeLight = false;
           }
           else return;
-          char buffer[128];
+          uint8_t buffer[128];
           size_t n = serializeJson(resp, buffer);
           checkConnection();
-          client.publish(anotherTopic, NULL);
-          client.publish("resp/st/0/3301/0/5700", buffer, n);
+          client.publish(anotherTopic, NULL, true);
+          client.publish("resp/st/0/3301/0/5700", buffer, n, false);
         }
         else processLight();
       }
@@ -244,11 +245,11 @@ void callback(char* topic, byte* message, unsigned int length) {
             observeTemperature = false;
           }
           else return;
-          char buffer[128];
+          uint8_t buffer[128];
           size_t n = serializeJson(resp, buffer);
           checkConnection();
-          client.publish(anotherTopic, NULL);
-          client.publish("resp/st/0/3303/0/5700", buffer, n);
+          client.publish(anotherTopic, NULL, true);
+          client.publish("resp/st/0/3303/0/5700", buffer, n, false);
         }
         else processTemperature();
       }
@@ -282,11 +283,11 @@ void callback(char* topic, byte* message, unsigned int length) {
             observeHumidity = false;
           }
           else return;
-          char buffer[128];
+          uint8_t buffer[128];
           size_t n = serializeJson(resp, buffer);
           checkConnection();
-          client.publish(anotherTopic, NULL);
-          client.publish("resp/st/0/3304/0/5700", buffer, n);
+          client.publish(anotherTopic, NULL, true);
+          client.publish("resp/st/0/3304/0/5700", buffer, n, false);
         }
         else processHumidity();
       }
@@ -320,11 +321,11 @@ void callback(char* topic, byte* message, unsigned int length) {
             observeFlame = false;
           }
           else return;
-          char buffer[128];
+          uint8_t buffer[128];
           size_t n = serializeJson(resp, buffer);
           checkConnection();
-          client.publish(anotherTopic, NULL);
-          client.publish("resp/st/0/503/0/5700", buffer, n);
+          client.publish(anotherTopic, NULL, true);
+          client.publish("resp/st/0/503/0/5700", buffer, n, false);
         }
         else processFlame();
       }
@@ -419,7 +420,7 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
-  boolean res = client.subscribe("cmd/st/0/#");
+  boolean res = client.subscribe("cmd/st/0/#",1);
   if(res){
     Serial.println("Subscribed!");
   }
@@ -432,43 +433,48 @@ void subscribe(){
 void loop() {
 
   client.loop();
+
+  long now = millis();
+  if(now - lastConnectionCheck >= connectionInterval){
+    checkConnection();
+    now=millis();
+    lastConnectionCheck= now;
+  }
   if(active){
     //Serial.println("Active");
     if(observeTemperature){
       //Qui dentro entriamo se l'observe per la temp è attivo
-      tempTickCounter++;
-      if(tempTickCounter>=tempTickQty){
+      if(now - lastTemperatureCheck >= temperatureInterval){
         //Time to read and send a new temperature data.
-        processTemperature();
-        tempTickCounter=0;
+        now=millis();
+        lastTemperatureCheck = now;
       }
     }
     if(observeHumidity){
       //Qui entriamo se l'observe per l'umidità è attivo
-      humTickCounter++;
-      if(humTickCounter>=humTickQty){
+      if(now - lastHumidityCheck >= humidityInterval){
         //Time to read and send a humidity update.
         processHumidity();
-        humTickCounter=0;
-
+        now = millis();
+        lastHumidityCheck = now;
       }
     }
     if(observeLight){
       //Qui entriamo se l'observe per la luminosità è attivo
-      lightTickCounter++;
-      if(lightTickCounter>=lightTickQty){
+      if(now - lastLightCheck >= lightInterval){
         //Time to read and send an illuminance update.
         processLight();
-        lightTickCounter=0;
+        now = millis();
+        lastLightCheck = now;
       }
     }
     if(observeFlame){
       //Qui entriamo se l'observe per la flame detection è attivo
-      flameTickCounter++;
-      if(flameTickCounter>=flameTickQty){
+      if(now - lastFlameCheck >= flameInterval){
         //Time to read and send flame updates.
         processFlame();
-        flameTickCounter=0;
+        now = millis();
+        lastFlameCheck = now;
       }
     }
   }
@@ -488,10 +494,10 @@ void processTemperature(){
   StaticJsonDocument<200> doc;
   doc["tstamp"]=getTime();
   doc["v"]=tempString;
-  char buffer[128];
+  uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  client.publish("data/st/0/3303/0/5700", buffer, n);
+  client.publish("data/st/0/3303/0/5700", buffer, n, false);
 }
 
 void processHumidity(){
@@ -502,10 +508,10 @@ void processHumidity(){
   StaticJsonDocument<200> doc;
   doc["tstamp"]=getTime();
   doc["v"]=humString;
-  char buffer[128];
+  uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  client.publish("data/st/0/3304/0/5700", buffer, n);
+  client.publish("data/st/0/3304/0/5700", buffer, n, false);
 }
 
 /*
@@ -521,10 +527,10 @@ void processLight(){
   StaticJsonDocument<200> doc;
   doc["tstamp"]=getTime();
   doc["v"]=lightString;
-  char buffer[128];
+  uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  client.publish("data/st/0/3301/0/5700", buffer, n);
+  client.publish("data/st/0/3301/0/5700", buffer, n, false);
 }
 
 void processFlame(){
@@ -533,10 +539,10 @@ void processFlame(){
   StaticJsonDocument<200> doc;
   doc["tstamp"]=getTime();
   doc["v"]=String(flame);
-  char buffer[128];
+  uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
   checkConnection();
-  client.publish("data/st/0/503/0/5700", buffer, n);
+  client.publish("data/st/0/503/0/5700", buffer, n, false);
 }
 
 unsigned long getTime() {
