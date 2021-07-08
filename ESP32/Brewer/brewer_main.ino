@@ -19,6 +19,8 @@
 OneWire oneWire(SENSOR_PIN);
 DallasTemperature tempSensor(&oneWire);
 
+//ID della scheda
+const char* deviceID = "10";
 
 //Dati per la connessione WiFi
 const char* ssid = "Gabriele-2.4GHz";
@@ -97,7 +99,10 @@ void setup_mqtt(){
   uint8_t buffer[128];
   size_t n = serializeJson(resp, buffer);
   checkConnection();
-  client.publish("resp/br/10/3/0/4", buffer, n, true);
+  char topicString[]= "resp/br/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/3/0/4");
+  client.publish(topicString, buffer, n, true);
 }
 
 /*
@@ -182,7 +187,10 @@ void callback(char* topic, byte* message, unsigned int length) {
           uint8_t buffer[128];
           size_t n = serializeJson(resp, buffer);
           checkConnection();
-          client.publish("resp/br/10/3303/0/5700", buffer, n, false);
+          char topicString[]= "resp/br/";
+          strcat(topicString, deviceID);
+          strcat(topicString, "/3303/0/5700");
+          client.publish(topicString, buffer, n, false);
           //Serial.println(anotherTopic);
           client.publish(anotherTopic, NULL, true);
         }
@@ -213,7 +221,9 @@ void callback(char* topic, byte* message, unsigned int length) {
         }
       }
     }
+    client.publish(anotherTopic, NULL, true);
   }
+
 }
 
 void reconnect() {
@@ -221,8 +231,9 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    String clientId = "ESP32-Brewer-10";
-    if (client.connect(clientId.c_str())) {
+    char *clientId = "ESP32-Brewer-";
+    strcat(clientId, deviceID);
+    if (client.connect(clientId)) {
       Serial.println("connected");
       delay(1000);
       subscribe();
@@ -238,8 +249,11 @@ void reconnect() {
 }
 
 void subscribe(){
-  //With the # wildcard we subscribe to all the subtopics of each sublevel. 
-  boolean res = client.subscribe("cmd/br/10/#",1);
+  //With the # wildcard we subscribe to all the subtopics of each sublevel.
+  char topicString[]= "cmd/br/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/#");
+  boolean res = client.subscribe(topicString,1);
   if(res){
     Serial.println("Subscribed!");
   }
@@ -252,7 +266,7 @@ void loop() {
   // put your main code here, to run repeatedly:
   client.loop();
   long now = millis();
-
+  
   if(now - lastConnectionCheck >= connectionInterval){
     checkConnection();
     now=millis();
@@ -287,7 +301,10 @@ void processTemperature(){
   checkConnection();
   Serial.print("Temperature: ");
   Serial.println(temperatureC);
-  client.publish("data/br/10/3303/0/5700", buffer, n, false);
+  char topicString[]= "data/br/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/3303/0/5700");
+  client.publish(topicString, buffer, n, false);
 }
 
 unsigned long getTime() {
