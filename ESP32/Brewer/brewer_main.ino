@@ -30,6 +30,11 @@ const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
 const char* mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 1883;
 
+byte willQoS = 0;
+char willTopic[60];
+char willMessage[60];
+boolean willRetain = false;
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -92,6 +97,7 @@ void setup_wifi(){
 void setup_mqtt(){
   client.setServer(mqtt_server,mqtt_port);
   client.setCallback(callback);
+  createLWTData();
   reconnect();
   delay(2000);
   StaticJsonDocument<200> resp;
@@ -123,6 +129,15 @@ void checkConnection(){
   if(!client.connected()){
     reconnect();
   }
+}
+
+void createLWTData(){
+  strcat(willTopic, "resp/br/");
+  strcat(willTopic, deviceID);
+  strcat(willTopic, "/3/0/11");
+  StaticJsonDocument<20> errorDoc;
+  errorDoc["error"]=2;
+  serializeJson(errorDoc, willMessage);
 }
 
 void callback(char* topic, byte* message, unsigned int length) {
@@ -234,7 +249,7 @@ void reconnect() {
     char clientId[18] = "ESP32-Brewer-";
     strcat(clientId, deviceID);
     Serial.println(clientId);
-    if (client.connect(clientId)) {
+    if (client.connect(clientId, willTopic, willQoS, willRetain, willMessage)) {
       Serial.println("connected");
       delay(1000);
       subscribe();
@@ -248,6 +263,7 @@ void reconnect() {
     }
   } 
 }
+
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel.
@@ -320,3 +336,4 @@ unsigned long getTime() {
   time(&now);
   return now;
 }
+
