@@ -45,6 +45,11 @@ const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
 const char* mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 1883;
 
+byte willQoS = 0;
+char willTopic[60];
+char willMessage[60];
+boolean willRetain = false;
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -140,6 +145,7 @@ void setup_wifi(){
 void setup_mqtt(){
   client.setServer(mqtt_server,mqtt_port);
   client.setCallback(callback);
+  createLWTData();
   reconnect();
   delay(2000);
 }
@@ -150,6 +156,16 @@ void setup_mqtt(){
 void setupTime(){
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   Serial.println(getTime());
+}
+
+
+void createLWTData(){
+  strcat(willTopic, "resp/st/");
+  strcat(willTopic, deviceID);
+  strcat(willTopic, "/3/0/11");
+  StaticJsonDocument<20> errorDoc;
+  errorDoc["error"]=2;
+  serializeJson(errorDoc, willMessage);
 }
 
 void callback(char* topic, byte* message, unsigned int length) {
