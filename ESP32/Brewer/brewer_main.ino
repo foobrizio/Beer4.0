@@ -33,7 +33,7 @@ const int mqtt_port = 1883;
 byte willQoS = 0;
 char willTopic[60];
 char willMessage[60];
-boolean willRetain = false;
+boolean willRetain = true;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -134,10 +134,12 @@ void checkConnection(){
 void createLWTData(){
   strcat(willTopic, "resp/br/");
   strcat(willTopic, deviceID);
-  strcat(willTopic, "/3/0/11");
-  StaticJsonDocument<20> errorDoc;
-  errorDoc["error"]=2;
-  serializeJson(errorDoc, willMessage);
+  strcat(willTopic, "/3/0/4");
+  StaticJsonDocument<200> resp;
+  resp["v"]="Online";
+  uint8_t buffer[128];
+  size_t n = serializeJson(resp, buffer);
+  serializeJson(resp, willMessage);
 }
 
 void callback(char* topic, byte* message, unsigned int length) {
