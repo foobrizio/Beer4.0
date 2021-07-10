@@ -101,7 +101,7 @@ void setup_mqtt(){
   reconnect();
   delay(2000);
   StaticJsonDocument<200> resp;
-  resp["v"]="rebooted";
+  resp["v"]="Online";
   uint8_t buffer[128];
   size_t n = serializeJson(resp, buffer);
   checkConnection();
@@ -336,4 +336,3 @@ unsigned long getTime() {
   time(&now);
   return now;
 }
-
