@@ -14,8 +14,6 @@
 #include <time.h>
 
 
-
-
 // DHT11 Configuration (temperature / humitity)
 #define DHTTYPE DHT11
 #define DHTPIN 27
@@ -48,7 +46,7 @@ const int mqtt_port = 1883;
 byte willQoS = 0;
 char willTopic[60];
 char willMessage[60];
-boolean willRetain = false;
+boolean willRetain = true;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -148,6 +146,15 @@ void setup_mqtt(){
   createLWTData();
   reconnect();
   delay(2000);
+  StaticJsonDocument<200> resp;
+  resp["v"]="Online";
+  uint8_t buffer[128];
+  size_t n = serializeJson(resp, buffer);
+  checkConnection();
+  char topicString[60]= "resp/st/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/3/0/4");
+  client.publish(topicString, buffer, n, true);
 }
 
 /*
@@ -162,20 +169,21 @@ void setupTime(){
 void createLWTData(){
   strcat(willTopic, "resp/st/");
   strcat(willTopic, deviceID);
-  strcat(willTopic, "/3/0/11");
-  StaticJsonDocument<20> errorDoc;
-  errorDoc["error"]=2;
-  serializeJson(errorDoc, willMessage);
+  strcat(willTopic, "/3/0/4");
+  StaticJsonDocument<20> respDoc;
+  respDoc["v"]="Offline";
+  serializeJson(respDoc, willMessage);
 }
 
 void callback(char* topic, byte* message, unsigned int length) {
   Serial.println("Message arrived.");
   String messageTemp;
   
-  //Qui convertiamo il byte* message in una stringa
+  //Qui u il byte* message in una stringa
   for (int i = 0; i < length; i++) {
     messageTemp += (char)message[i];
   }
+  Serial.println(messageTemp);
   //Qui convertiamo il char* topic in un char[]
   char myTopic[50];
   char anotherTopic[50];
@@ -200,7 +208,39 @@ void callback(char* topic, byte* message, unsigned int length) {
   StaticJsonDocument<200> doc;
   StaticJsonDocument<200> resp;
 
-  if(objectId=="3301"){
+  if(objectId=="3"){
+    //Device itself
+    if(objectInstance=="0"){
+      DeserializationError error = deserializeJson(doc, messageTemp);
+      // Test if parsing succeeds.
+      if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str());
+        return;
+      }
+      String value = doc["v"];
+      if(value == "ON"){
+        resp["v"]=1;
+        active=true;
+        subscribe();
+      }
+      else if (value == "OFF"){
+        resp["v"] =0;
+        active=false;
+        subscribe();
+      }
+      else return;
+      uint8_t buffer[128];
+      size_t n = serializeJson(resp, buffer);
+      checkConnection();
+      client.publish(anotherTopic, NULL, true);
+      char topicString[60] = "resp/st/";
+      strcat(topicString, deviceID);
+      strcat(topicString, "/3/0");
+      client.publish(topicString, buffer, n, true);
+    }
+  }
+  else if(objectId=="3301"){
     //Illuminance
     if(objectInstance=="0"){
       if(resId=="5700"){
@@ -436,7 +476,7 @@ void reconnect() {
     // Attempt to connect
     char clientId[20] = "ESP32-Stocker-";
     strcat(clientId, deviceID);
-    if (client.connect(clientId)) {
+    if (client.connect(clientId, willTopic, willQoS, willRetain, willMessage)) {
       Serial.println("connected");
       delay(1000);
       subscribe();
@@ -453,17 +493,39 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
-
-  char topicString[20]= "cmd/st/";
-  strcat(topicString, deviceID);
-  strcat(topicString, "/#");  
-  boolean res = client.subscribe(topicString, 1);
-  if(res){
-    Serial.println("Subscribed!");
+  
+  if(!active){
+    char onlyTopic[40] = "cmd/st/";
+    strcat(onlyTopic, deviceID);
+    strcat(onlyTopic, "/3/0");
+    boolean res = client.subscribe(onlyTopic,1);
+    if(res)
+      Serial.println("Subscribed!");
+    else
+      Serial.println("Unable to subscribe");
   }
   else{
-    Serial.println("Unable to subscribe");
+    char topicString[20]= "cmd/st/";
+    strcat(topicString, deviceID);
+    strcat(topicString, "/#");  
+    boolean res = client.subscribe(topicString, 1);
+    if(res)
+      Serial.println("Subscribed!");
+    else
+      Serial.println("Unable to subscribe");
   }
+}
+
+void deactivate(){
+  char topicString[20]= "cmd/st/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/#");
+  client.unsubscribe(topicString);
+  char onlyTopic[40] = "cmd/st/";
+  strcat(onlyTopic, deviceID);
+  strcat(onlyTopic, "/3/0");
+  client.subscribe(onlyTopic,1);
+  active=false;
 }
 
 
@@ -483,6 +545,7 @@ void loop() {
       //Qui dentro entriamo se l'observe per la temp è attivo
       if(now - lastTemperatureCheck >= temperatureInterval){
         //Time to read and send a new temperature data.
+        processTemperature();
         now=millis();
         lastTemperatureCheck = now;
       }
@@ -575,7 +638,7 @@ void processLight(){
   checkConnection();
   char topicString[60] = "data/st/";
   strcat(topicString, deviceID);
-  strcat(topicString, "/3306/0/5700");
+  strcat(topicString, "/3301/0/5700");
   client.publish(topicString, buffer, n, false);
 }
 
