@@ -23,8 +23,8 @@ DallasTemperature tempSensor(&oneWire);
 const char deviceID[] = "10";
 
 //Dati per la connessione WiFi
-const char* ssid = "Gabriele-2.4GHz";
-const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
+const char* ssid = "";
+const char* pass = "";
 
 //Dati per la configurazione MQTT
 const char* mqtt_server = "broker.hivemq.com";
@@ -136,7 +136,7 @@ void createLWTData(){
   strcat(willTopic, deviceID);
   strcat(willTopic, "/3/0/4");
   StaticJsonDocument<200> resp;
-  resp["v"]="Online";
+  resp["v"]="Offline";
   uint8_t buffer[128];
   size_t n = serializeJson(resp, buffer);
   serializeJson(resp, willMessage);
@@ -175,7 +175,40 @@ void callback(char* topic, byte* message, unsigned int length) {
   StaticJsonDocument<200> doc;
   StaticJsonDocument<200> resp;
 
-  if(objectId=="3303"){
+  
+  if(objectId=="3"){
+    //Device itself
+    if(objectInstance=="0"){
+      DeserializationError error = deserializeJson(doc, messageTemp);
+      // Test if parsing succeeds.
+      if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str());
+        return;
+      }
+      String value = doc["v"];
+      if(value == "ON"){
+        resp["v"]=1;
+        active=true;
+        subscribe();
+      }
+      else if (value == "OFF"){
+        resp["v"] =0;
+        active=false;
+        subscribe();
+      }
+      else return;
+      uint8_t buffer[128];
+      size_t n = serializeJson(resp, buffer);
+      checkConnection();
+      client.publish(anotherTopic, NULL, true);
+      char topicString[60] = "resp/br/";
+      strcat(topicString, deviceID);
+      strcat(topicString, "/3/0");
+      client.publish(topicString, buffer, n, true);
+    }
+  }
+  else if(objectId=="3303"){
     //Temperature
     if(objectInstance=="0"){
       if(resId=="5700"){
@@ -240,8 +273,8 @@ void callback(char* topic, byte* message, unsigned int length) {
     }
     client.publish(anotherTopic, NULL, true);
   }
-
 }
+
 
 void reconnect() {
   // Loop until we're reconnected
@@ -269,16 +302,25 @@ void reconnect() {
 
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel.
-  char topicString[60]= "cmd/br/";
-  strcat(topicString, deviceID);
-  strcat(topicString, "/#");
-  Serial.println(topicString);  
-  boolean res = client.subscribe(topicString,1);
-  if(res){
-    Serial.println("Subscribed!");
+  if(!active){
+    char onlyTopic[40] = "cmd/br/";
+    strcat(onlyTopic, deviceID);
+    strcat(onlyTopic, "/3/0");
+    boolean res = client.subscribe(onlyTopic,1);
+    if(res)
+      Serial.println("Subscribed!");
+    else
+      Serial.println("Unable to subscribe");
   }
   else{
-    Serial.println("Unable to subscribe");
+    char topicString[20]= "cmd/br/";
+    strcat(topicString, deviceID);
+    strcat(topicString, "/#");  
+    boolean res = client.subscribe(topicString, 1);
+    if(res)
+      Serial.println("Subscribed!");
+    else
+      Serial.println("Unable to subscribe");
   }
 }
 
