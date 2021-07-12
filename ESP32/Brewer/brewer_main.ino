@@ -163,8 +163,10 @@ void getStatus(){
 
 void setStatus(uint8_t value){
   EEPROM.write(STATUS_ADDRESS,value);
-  if(value==0)
+  if(value==0){
+    digitalWrite(TEMP_LED, LOW);
     active=false;
+  }
   else if(value==1)
     active=true;
   EEPROM.commit();
@@ -413,5 +415,4 @@ unsigned long getTime() {
   time(&now);
   return now;
 }
-
 
