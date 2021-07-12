@@ -13,6 +13,10 @@
 //Questa libreria serve per l'NTP
 #include <time.h>
 
+//Questa libreria serve per salvare dei valori nella EEPROM
+#include <EEPROM.h>
+#define EEPROM_SIZE 20
+#define STATUS_ADDRESS 10
 
 // DHT11 Configuration (temperature / humitity)
 #define DHTTYPE DHT11
@@ -81,6 +85,7 @@ const long flameInterval=3000;
 long lastConnectionCheck;
 const long connectionInterval = 5000;
 
+
 /* Questo è il documento JSON che creiamo con tutti i valori ricevuti dai sensori.
  * Man mano che riceviamo valori, il documento cresce. Alla fine viene serializzato
  * ed inviato tramite MQTT
@@ -91,6 +96,8 @@ JsonArray array;
 void setup() {
 
   Serial.begin(115200);
+  // initialize EEPROM with predefined size
+  EEPROM.begin(EEPROM_SIZE);
   setup_wifi();
   //setupNTP();
   setup_mqtt();
@@ -165,7 +172,6 @@ void setupTime(){
   Serial.println(getTime());
 }
 
-
 void createLWTData(){
   strcat(willTopic, "resp/st/");
   strcat(willTopic, deviceID);
@@ -173,6 +179,28 @@ void createLWTData(){
   StaticJsonDocument<20> respDoc;
   respDoc["v"]="Offline";
   serializeJson(respDoc, willMessage);
+}
+
+void getStatus(){
+  int status = EEPROM.read(STATUS_ADDRESS);
+  Serial.print("Status: ");
+  if(status==0){
+    Serial.println("Not active");
+    active=false;
+  }
+  else if(status==1){
+    Serial.println("active");
+    active=true;
+  }
+}
+
+void setStatus(uint8_t value){
+  EEPROM.write(STATUS_ADDRESS,value);
+  if(value==0)
+    active=false;
+  else if(value==1)
+    active=true;
+  EEPROM.commit();
 }
 
 void callback(char* topic, byte* message, unsigned int length) {
@@ -221,12 +249,12 @@ void callback(char* topic, byte* message, unsigned int length) {
       String value = doc["v"];
       if(value == "ON"){
         resp["v"]=1;
-        active=true;
+        setStatus(1);
         subscribe();
       }
       else if (value == "OFF"){
         resp["v"] =0;
-        active=false;
+        setStatus(0);
         subscribe();
       }
       else return;
@@ -478,6 +506,7 @@ void reconnect() {
     strcat(clientId, deviceID);
     if (client.connect(clientId, willTopic, willQoS, willRetain, willMessage)) {
       Serial.println("connected");
+      getStatus();
       delay(1000);
       subscribe();
     }
@@ -495,6 +524,10 @@ void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
   
   if(!active){
+    char topicString[20]= "cmd/st/";
+    strcat(topicString, deviceID);
+    strcat(topicString, "/#");
+    client.unsubscribe(topicString);
     char onlyTopic[40] = "cmd/st/";
     strcat(onlyTopic, deviceID);
     strcat(onlyTopic, "/3/0");
@@ -516,23 +549,10 @@ void subscribe(){
   }
 }
 
-void deactivate(){
-  char topicString[20]= "cmd/st/";
-  strcat(topicString, deviceID);
-  strcat(topicString, "/#");
-  client.unsubscribe(topicString);
-  char onlyTopic[40] = "cmd/st/";
-  strcat(onlyTopic, deviceID);
-  strcat(onlyTopic, "/3/0");
-  client.subscribe(onlyTopic,1);
-  active=false;
-}
-
 
 void loop() {
 
   client.loop();
-
   long now = millis();
   if(now - lastConnectionCheck >= connectionInterval){
     checkConnection();
@@ -592,7 +612,7 @@ void processTemperature(){
   char tempString[8];
   dtostrf(temperature, 1, 2, tempString);
   StaticJsonDocument<200> doc;
-  doc["tstamp"]=getTime();
+  doc["time"]=getTime();
   doc["v"]=tempString;
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -600,6 +620,7 @@ void processTemperature(){
   char topicString[60] = "data/st/";
   strcat(topicString, deviceID);
   strcat(topicString, "/3303/0/5700");
+  Serial.println(temperature);
   client.publish(topicString, buffer, n, false);
 }
 
@@ -609,7 +630,7 @@ void processHumidity(){
   char humString[8];
   dtostrf(humidity, 1, 2, humString);
   StaticJsonDocument<200> doc;
-  doc["tstamp"]=getTime();
+  doc["time"]=getTime();
   doc["v"]=humString;
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -617,6 +638,7 @@ void processHumidity(){
   char topicString[60] = "data/st/";
   strcat(topicString, deviceID);
   strcat(topicString, "/3304/0/5700");
+  Serial.println(humidity);
   client.publish(topicString, buffer, n, false);
 }
 
@@ -631,7 +653,7 @@ void processLight(){
   char lightString[8];
   dtostrf(value, 1, 2, lightString);
   StaticJsonDocument<200> doc;
-  doc["tstamp"]=getTime();
+  doc["time"]=getTime();
   doc["v"]=lightString;
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -639,6 +661,7 @@ void processLight(){
   char topicString[60] = "data/st/";
   strcat(topicString, deviceID);
   strcat(topicString, "/3301/0/5700");
+  Serial.println(l);
   client.publish(topicString, buffer, n, false);
 }
 
@@ -646,7 +669,7 @@ void processFlame(){
   Serial.println("Sending flame");
   boolean flame = digitalRead(FLAME_PIN);
   StaticJsonDocument<200> doc;
-  doc["tstamp"]=getTime();
+  doc["time"]=getTime();
   doc["v"]=String(flame);
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -654,6 +677,7 @@ void processFlame(){
   char topicString[60] = "data/st/";
   strcat(topicString, deviceID);
   strcat(topicString, "/503/0/5700");
+  Serial.println(flame);
   client.publish(topicString, buffer, n, false);
 }
 
@@ -668,3 +692,4 @@ unsigned long getTime() {
   time(&now);
   return now;
 }
+
