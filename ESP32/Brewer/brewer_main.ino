@@ -331,6 +331,10 @@ void reconnect() {
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel.
   if(!active){
+    char topicString[20]= "cmd/br/";
+    strcat(topicString, deviceID);
+    strcat(topicString, "/#");
+    client.unsubscribe(topicString);
     char onlyTopic[40] = "cmd/br/";
     strcat(onlyTopic, deviceID);
     strcat(onlyTopic, "/3/0");
@@ -408,4 +412,5 @@ unsigned long getTime() {
   time(&now);
   return now;
 }
+
 
