@@ -70,6 +70,7 @@ JsonArray array;
 void setup() {
 
   Serial.begin(115200);
+  EEPROM.begin(EEPROM_SIZE);
   setup_wifi();
   //setupNTP();
   setup_mqtt();
