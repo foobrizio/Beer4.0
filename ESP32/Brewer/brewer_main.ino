@@ -221,7 +221,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       }
       else if (value == "OFF"){
         resp["v"] =0;
-        setStatus(1);
+        setStatus(0);
         subscribe();
       }
       else return;
