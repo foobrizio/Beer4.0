@@ -13,6 +13,11 @@
 #include "OneWire.h"
 #include "DallasTemperature.h"
 
+//Questa libreria serve per salvare dei valori nella EEPROM
+#include <EEPROM.h>
+#define EEPROM_SIZE 20
+#define STATUS_ADDRESS 10
+
 #define TEMP_LED 4
 //Configurazione termometro 
 #define SENSOR_PIN 13
@@ -23,8 +28,8 @@ DallasTemperature tempSensor(&oneWire);
 const char deviceID[] = "10";
 
 //Dati per la connessione WiFi
-const char* ssid = "";
-const char* pass = "";
+const char* ssid = "Gabriele-2.4GHz";
+const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
 
 //Dati per la configurazione MQTT
 const char* mqtt_server = "broker.hivemq.com";
@@ -142,6 +147,28 @@ void createLWTData(){
   serializeJson(resp, willMessage);
 }
 
+void getStatus(){
+  int status = EEPROM.read(STATUS_ADDRESS);
+  Serial.print("Status: ");
+  if(status==0){
+    Serial.println("Not active");
+    active=false;
+  }
+  else if(status==1){
+    Serial.println("active");
+    active=true;
+  }
+}
+
+void setStatus(uint8_t value){
+  EEPROM.write(STATUS_ADDRESS,value);
+  if(value==0)
+    active=false;
+  else if(value==1)
+    active=true;
+  EEPROM.commit();
+}
+
 void callback(char* topic, byte* message, unsigned int length) {
   Serial.println("Message arrived.");
   String messageTemp;
@@ -189,12 +216,12 @@ void callback(char* topic, byte* message, unsigned int length) {
       String value = doc["v"];
       if(value == "ON"){
         resp["v"]=1;
-        active=true;
+        setStatus(1);
         subscribe();
       }
       else if (value == "OFF"){
         resp["v"] =0;
-        active=false;
+        setStatus(1);
         subscribe();
       }
       else return;
@@ -286,6 +313,7 @@ void reconnect() {
     Serial.println(clientId);
     if (client.connect(clientId, willTopic, willQoS, willRetain, willMessage)) {
       Serial.println("connected");
+      getStatus();
       delay(1000);
       subscribe();
     }
@@ -380,3 +408,4 @@ unsigned long getTime() {
   time(&now);
   return now;
 }
+
