@@ -11,7 +11,7 @@
 #include <string.h>
 
 //Questa libreria serve per l'NTP
-#include <time.h>
+//#include <time.h>
 
 //Questa libreria serve per salvare dei valori nella EEPROM
 #include <EEPROM.h>
@@ -103,7 +103,7 @@ void setup() {
   setup_mqtt();
   setupWires();
   // Init and get the time
-  setupTime();
+  //setupTime();
 }
 
 /*
@@ -167,10 +167,11 @@ void setup_mqtt(){
 /*
  * Configurazione del server NTP per recuperare l'orario da internet
  */
+ /*
 void setupTime(){
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   Serial.println(getTime());
-}
+}*/
 
 void createLWTData(){
   strcat(willTopic, "resp/st/");
@@ -612,7 +613,7 @@ void processTemperature(){
   char tempString[8];
   dtostrf(temperature, 1, 2, tempString);
   StaticJsonDocument<200> doc;
-  doc["time"]=getTime();
+  //doc["time"]=getTime();
   doc["v"]=tempString;
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -630,7 +631,7 @@ void processHumidity(){
   char humString[8];
   dtostrf(humidity, 1, 2, humString);
   StaticJsonDocument<200> doc;
-  doc["time"]=getTime();
+  //doc["time"]=getTime();
   doc["v"]=humString;
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -653,7 +654,7 @@ void processLight(){
   char lightString[8];
   dtostrf(value, 1, 2, lightString);
   StaticJsonDocument<200> doc;
-  doc["time"]=getTime();
+  //doc["time"]=getTime();
   doc["v"]=lightString;
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -669,7 +670,7 @@ void processFlame(){
   Serial.println("Sending flame");
   boolean flame = digitalRead(FLAME_PIN);
   StaticJsonDocument<200> doc;
-  doc["time"]=getTime();
+  //doc["time"]=getTime();
   doc["v"]=String(flame);
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -680,7 +681,7 @@ void processFlame(){
   Serial.println(flame);
   client.publish(topicString, buffer, n, false);
 }
-
+/* 
 unsigned long getTime() {
   time_t now;
   struct tm timeinfo;
@@ -691,5 +692,6 @@ unsigned long getTime() {
   }
   time(&now);
   return now;
-}
+}*/
+
 
