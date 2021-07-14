@@ -6,8 +6,6 @@
 
 #include <string.h>
 
-//Questa libreria serve per l'NTP
-#include <time.h>
 
 //Queste librerie servono per il termometro DS18B20
 #include "OneWire.h"
@@ -75,7 +73,7 @@ void setup() {
   //setupNTP();
   setup_mqtt();
   // Init and get the time
-  setupTime();
+  // setupTime();
   setupWires();
 }
 
@@ -120,10 +118,11 @@ void setup_mqtt(){
 /*
  * Configurazione del server NTP per recuperare l'orario da internet
  */
+ /*
 void setupTime(){
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   Serial.println(getTime());
-}
+}*/
 
 void setupWires(){
   tempSensor.begin();
@@ -391,7 +390,7 @@ void processTemperature(){
   char tempString[8];
   dtostrf(temperatureC, 1, 2, tempString);
   StaticJsonDocument<200> doc;
-  doc["tstamp"]=getTime();
+  //doc["tstamp"]=getTime();
   doc["v"]=temperatureC;
   uint8_t buffer[128];
   size_t n = serializeJson(doc, buffer);
@@ -403,7 +402,7 @@ void processTemperature(){
   strcat(topicString, "/3303/0/5700");
   client.publish(topicString, buffer, n, false);
 }
-
+/*
 unsigned long getTime() {
   time_t now;
   struct tm timeinfo;
@@ -414,5 +413,5 @@ unsigned long getTime() {
   }
   time(&now);
   return now;
-}
+}*/
 
