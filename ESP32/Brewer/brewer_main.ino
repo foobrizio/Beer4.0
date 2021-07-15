@@ -32,6 +32,7 @@ const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
 //Dati per la configurazione MQTT
 const char* mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 1883;
+const char* brm_LWT_topic = "resp/brm/3/0/11";
 
 byte willQoS = 0;
 char willTopic[60];
@@ -196,6 +197,7 @@ void callback(char* topic, byte* message, unsigned int length) {
     index++;
     ptr = strtok(NULL, "/");  // takes a list of delimiters
   }
+  String locationId = levels[1];
   String objectId=levels[3];
   String objectInstance=levels[4];
   String resId=levels[5];
@@ -204,7 +206,23 @@ void callback(char* topic, byte* message, unsigned int length) {
   StaticJsonDocument<200> doc;
   StaticJsonDocument<200> resp;
 
-  
+  if(locationId == "brm"){
+    //we received a message from the Brewmaster
+    //Since there's no deviceID, we rewrite the variables
+    objectId = levels[2];
+    resId = levels[4];
+    if(objectId == "3" && resId == "11"){
+      //We received an error code
+      if(messageTemp == "2"){
+        //This is the LWT. We proceed deactivating the observes and turning off the belt
+        deactivateFermentor();
+      }
+      if(messageTemp == "0"){
+        //The system woke up again. We reactivate the observes
+        reactivateObserves();
+      }
+    }
+  }
   if(objectId=="3"){
     //Device itself
     if(objectInstance=="0"){
@@ -356,6 +374,22 @@ void subscribe(){
     else
       Serial.println("Unable to subscribe");
   }
+  client.subscribe(brm_LWT_topic, 1);
+}
+
+void deactivateFermentor(){
+  //First of all, we deactivate the warming belt
+  char topicBelt[30] = "br/";
+  strcat(topicBelt, deviceID + 1);
+  strcat(topicBelt, "/3306/cmnd/POWER");
+  char *payload = "OFF";
+  client.publish(topicBelt, payload, true );
+  //then, we deactivate eventual observeS
+  observeTemperature = false;
+}
+
+void reactivateObserves(){
+  observeTemperature = true;
 }
 
 void loop() {
