@@ -40,12 +40,11 @@ const char deviceID[] = "0";
 //Dati per la connessione WiFi
 const char* ssid = "Gabriele-2.4GHz";
 const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
-//const char* ssid = "dlink-8D53";
-//const char* pass = "Nuvola&Penny_53";
 
 //Dati per la configurazione MQTT
 const char* mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 1883;
+const char* brm_LWT_topic = "resp/brm/3/0/11";
 
 byte willQoS = 0;
 char willTopic[60];
@@ -84,7 +83,6 @@ const long flameInterval=3000;
 //Questa coppia serve per il controllo della connessione
 long lastConnectionCheck;
 const long connectionInterval = 5000;
-
 
 /* Questo è il documento JSON che creiamo con tutti i valori ricevuti dai sensori.
  * Man mano che riceviamo valori, il documento cresce. Alla fine viene serializzato
@@ -229,6 +227,7 @@ void callback(char* topic, byte* message, unsigned int length) {
     index++;
     ptr = strtok(NULL, "/");  // takes a list of delimiters
   }
+  String locationId=levels[1];
   String objectId=levels[3];
   String objectInstance=levels[4];
   String resId=levels[5];
@@ -237,6 +236,23 @@ void callback(char* topic, byte* message, unsigned int length) {
   StaticJsonDocument<200> doc;
   StaticJsonDocument<200> resp;
 
+  if(locationId == "brm"){
+    //we received a message from the Brewmaster
+    //Since there's no deviceID, we rewrite the variables
+    objectId = levels[2];
+    resId = levels[4];
+    if(objectId == "3" && resId == "11"){
+      //We received an error code
+      if(messageTemp == "2"){
+        //This is the LWT. We proceed deactivating the observes and turning off the belt
+        deactivateObserves();
+      }
+      else if(messageTemp == "0"){
+        //The system woke up again. We reactivate observes
+        reactivateObserves();
+      }
+    }
+  }
   if(objectId=="3"){
     //Device itself
     if(objectInstance=="0"){
@@ -548,9 +564,23 @@ void subscribe(){
     else
       Serial.println("Unable to subscribe");
   }
+  client.subscribe(brm_LWT_topic, 1);
 }
 
 
+void deactivateObserves(){
+  observeTemperature = false;
+  observeHumidity = false;
+  observeLight = false;
+  observeFlame = false;
+}
+
+void reactivateObserves(){
+  observeTemperature = true;
+  observeHumidity = true;
+  observeLight = true;
+  observeFlame = true;
+}
 void loop() {
 
   client.loop();
