@@ -26,8 +26,8 @@ DallasTemperature tempSensor(&oneWire);
 const char deviceID[] = "10";
 
 //Dati per la connessione WiFi
-const char* ssid = "Gabriele-2.4GHz";
-const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
+const char* ssid = "";
+const char* pass = "";
 
 //Dati per la configurazione MQTT
 const char* mqtt_server = "broker.hivemq.com";
