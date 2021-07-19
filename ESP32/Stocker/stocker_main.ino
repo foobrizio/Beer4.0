@@ -39,6 +39,7 @@ const char deviceID[] = "0";
 
 //Dati per la connessione WiFi
 const char* ssid = "Gabriele-2.4GHz";
+//const char* ssid = "tplink-2.4GHz";
 const char* pass = "i8Eo6zdPhvfqgzPVKo85hWP1";
 
 //Dati per la configurazione MQTT
@@ -55,9 +56,9 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 //Dati per la connessione al server NTP (per l'orario)
-const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = 3600;
-const int   daylightOffset_sec = 3600;
+//const char* ntpServer = "pool.ntp.org";
+//const long  gmtOffset_sec = 3600;
+//const int   daylightOffset_sec = 3600;
 
 // Qeusto boolean attiva o disattiva la scheda
 boolean active=true;
@@ -75,9 +76,9 @@ long lastHumidityCheck;
 long lastLightCheck;
 long lastFlameCheck;
 
-const long temperatureInterval=30000;
-const long humidityInterval=30000;
-const long lightInterval=30000;
+const long temperatureInterval=60000;
+const long humidityInterval=60000;
+const long lightInterval=60000;
 const long flameInterval=3000;
 
 //Questa coppia serve per il controllo della connessione
@@ -135,7 +136,8 @@ void setup_wifi(){
   Serial.println(ssid);
   WiFi.begin(ssid,pass);
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    delay(700);
+    Serial.println(WiFi.status());
     Serial.print(".");
   }
   randomSeed(micros());
@@ -151,15 +153,6 @@ void setup_mqtt(){
   createLWTData();
   reconnect();
   delay(2000);
-  StaticJsonDocument<200> resp;
-  resp["v"]="Online";
-  uint8_t buffer[128];
-  size_t n = serializeJson(resp, buffer);
-  checkConnection();
-  char topicString[60]= "resp/st/";
-  strcat(topicString, deviceID);
-  strcat(topicString, "/3/0/4");
-  client.publish(topicString, buffer, n, true);
 }
 
 /*
@@ -245,7 +238,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       //We received an error code
       if(messageTemp == "2"){
         //This is the LWT. We proceed deactivating the observes and turning off the belt
-        deactivateObserves();
+        deactivate();
       }
       else if(messageTemp == "0"){
         //The system woke up again. We reactivate observes
@@ -324,7 +317,6 @@ void callback(char* topic, byte* message, unsigned int length) {
       }
     }
   }
-
 
   else if(objectId=="3303"){
     //Temperature
@@ -525,6 +517,7 @@ void reconnect() {
       Serial.println("connected");
       getStatus();
       delay(1000);
+      sendBirthMessage();
       subscribe();
     }
     else {
@@ -537,6 +530,18 @@ void reconnect() {
   } 
 }
 
+
+void sendBirthMessage(){
+  StaticJsonDocument<200> resp;
+  resp["v"]="Online";
+  uint8_t buffer[128];
+  size_t n = serializeJson(resp, buffer);
+  checkConnection();
+  char topicString[60]= "resp/st/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/3/0/4");
+  client.publish(topicString, buffer, n, true);
+}
 void subscribe(){
   //With the # wildcard we subscribe to all the subtopics of each sublevel. 
   
@@ -568,7 +573,25 @@ void subscribe(){
 }
 
 
-void deactivateObserves(){
+void deactivate(){
+  char topicLED[30] = "cmd/st/";
+  strcat(topicLED, deviceID);
+  for(int i = 0;i<4;i++){
+    char tempTopic[30];
+    strcpy(tempTopic, topicLED);
+    char devLED[3];
+    sprintf(devLED, "%d", i);
+    strcat(tempTopic,"/3311/");
+    strcat(tempTopic, devLED);
+    strcat(tempTopic,"5850");
+    StaticJsonDocument<200> doc;
+    doc["v"]="OFF";
+    uint8_t buffer[128];
+    size_t n = serializeJson(doc, buffer);
+    Serial.println(tempTopic);
+    client.publish(tempTopic, buffer, n, true);
+  }
+  
   observeTemperature = false;
   observeHumidity = false;
   observeLight = false;
@@ -723,5 +746,3 @@ unsigned long getTime() {
   time(&now);
   return now;
 }*/
-
-
