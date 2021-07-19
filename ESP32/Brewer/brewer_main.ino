@@ -34,7 +34,7 @@ const char* mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 1883;
 const char* brm_LWT_topic = "resp/brm/3/0/11";
 
-byte willQoS = 0;
+byte willQoS = 1;
 char willTopic[60];
 char willMessage[60];
 boolean willRetain = true;
@@ -58,7 +58,7 @@ long lastConnectionCheck=0;
 long lastTemperatureCheck=0;
 
 const long connectionInterval = 5000; //milliseconds
-const long temperatureInterval = 30000; //milliseconds
+const long temperatureInterval = 60000; //milliseconds
 /* Questo è il documento JSON che creiamo con tutti i valori ricevuti dai sensori.
  * Man mano che riceviamo valori, il documento cresce. Alla fine viene serializzato
  * ed inviato tramite MQTT
@@ -105,15 +105,6 @@ void setup_mqtt(){
   createLWTData();
   reconnect();
   delay(2000);
-  StaticJsonDocument<200> resp;
-  resp["v"]="Online";
-  uint8_t buffer[128];
-  size_t n = serializeJson(resp, buffer);
-  checkConnection();
-  char topicString[60]= "resp/br/";
-  strcat(topicString, deviceID);
-  strcat(topicString, "/3/0/4");
-  client.publish(topicString, buffer, n, true);
 }
 
 /*
@@ -135,6 +126,18 @@ void checkConnection(){
   if(!client.connected()){
     reconnect();
   }
+}
+
+void sendBirthMessage(){
+  StaticJsonDocument<200> resp;
+  resp["v"]="Online";
+  uint8_t buffer[128];
+  size_t n = serializeJson(resp, buffer);
+  checkConnection();
+  char topicString[60]= "resp/br/";
+  strcat(topicString, deviceID);
+  strcat(topicString, "/3/0/4");
+  client.publish(topicString, buffer, n, true);
 }
 
 void createLWTData(){
@@ -180,6 +183,7 @@ void callback(char* topic, byte* message, unsigned int length) {
   for (int i = 0; i < length; i++) {
     messageTemp += (char)message[i];
   }
+  
   Serial.println(messageTemp);
   //Qui convertiamo il char* topic in un char[]
   char myTopic[50];
@@ -209,6 +213,7 @@ void callback(char* topic, byte* message, unsigned int length) {
   if(locationId == "brm"){
     //we received a message from the Brewmaster
     //Since there's no deviceID, we rewrite the variables
+    
     objectId = levels[2];
     resId = levels[4];
     if(objectId == "3" && resId == "11"){
@@ -219,7 +224,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       }
       if(messageTemp == "0"){
         //The system woke up again. We reactivate the observes
-        reactivateObserves();
+        reactivateObserves();        
       }
     }
   }
@@ -334,6 +339,7 @@ void reconnect() {
     if (client.connect(clientId, willTopic, willQoS, willRetain, willMessage)) {
       Serial.println("connected");
       getStatus();
+      sendBirthMessage();
       delay(1000);
       subscribe();
     }
@@ -380,10 +386,24 @@ void subscribe(){
 void deactivateFermentor(){
   //First of all, we deactivate the warming belt
   char topicBelt[30] = "br/";
-  strcat(topicBelt, deviceID + 1);
-  strcat(topicBelt, "/3306/cmnd/POWER");
+  int tempID = atoi(deviceID)+1;
+  char beltID[5];
+  sprintf(beltID, "%d", tempID);
+  //Serial.println(beltID);
+  strcat(topicBelt, beltID);
+  strcat(topicBelt, "/3306/0/cmnd/POWER");
+  Serial.println(topicBelt);
   char *payload = "OFF";
-  client.publish(topicBelt, payload, true );
+  client.publish(topicBelt, payload, true);
+  char topicLed[30] = "cmd/br/";
+  strcat(topicLed, deviceID);
+  strcat(topicLed, "/3311/0/5850");
+  StaticJsonDocument<200> doc;
+  //doc["tstamp"]=getTime();
+  doc["v"]="OFF";
+  uint8_t buffer[128];
+  size_t n = serializeJson(doc, buffer);
+  client.publish(topicLed, buffer, n, true);
   //then, we deactivate eventual observeS
   observeTemperature = false;
 }
@@ -448,4 +468,3 @@ unsigned long getTime() {
   time(&now);
   return now;
 }*/
-
